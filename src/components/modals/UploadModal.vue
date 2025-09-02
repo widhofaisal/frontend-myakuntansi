@@ -10,23 +10,11 @@
 
       <div class="modal-body">
         <!-- Upload Area -->
-        <div
-          class="upload-area"
-          :class="{ 'drag-over': isDragOver, 'has-files': selectedFiles.length > 0 }"
-          @drop="handleDrop"
-          @dragover.prevent="isDragOver = true"
-          @dragleave="isDragOver = false"
-          @dragenter.prevent
-          @click="triggerFileInput"
-        >
-          <input
-            ref="fileInput"
-            type="file"
-            multiple
-            @change="handleFileSelect"
-            class="file-input"
-          >
-          
+        <div class="upload-area" :class="{ 'drag-over': isDragOver, 'has-files': selectedFiles.length > 0 }"
+          @drop="handleDrop" @dragover.prevent @dragleave.prevent="handleDragLeave"
+          @dragenter.prevent="handleDragEnter" @click="triggerFileInput">
+          <input ref="fileInput" type="file" multiple @change="handleFileSelect" class="file-input">
+
           <div v-if="selectedFiles.length === 0" class="upload-prompt">
             <i class="fas fa-cloud-upload-alt"></i>
             <h4>Drop files here or click to browse</h4>
@@ -36,11 +24,7 @@
           <div v-else class="file-list">
             <h4>Selected Files ({{ selectedFiles.length }})</h4>
             <div class="file-items">
-              <div
-                v-for="(file, index) in selectedFiles"
-                :key="index"
-                class="file-item"
-              >
+              <div v-for="(file, index) in selectedFiles" :key="index" class="file-item">
                 <div class="file-info">
                   <i :class="getFileIcon(file)"></i>
                   <div class="file-details">
@@ -63,10 +47,7 @@
             <span>{{ filesStore.uploadProgress }}%</span>
           </div>
           <div class="progress-bar">
-            <div 
-              class="progress-fill" 
-              :style="{ width: filesStore.uploadProgress + '%' }"
-            ></div>
+            <div class="progress-fill" :style="{ width: filesStore.uploadProgress + '%' }"></div>
           </div>
         </div>
 
@@ -74,16 +55,12 @@
         <div v-if="selectedFiles.length > 0 && !isUploading" class="upload-options">
           <div class="option-group">
             <label class="checkbox-label">
-              <input
-                v-model="uploadOptions.overwrite"
-                type="checkbox"
-                class="checkbox-input"
-              >
+              <input v-model="uploadOptions.overwrite" type="checkbox" class="checkbox-input">
               <span class="checkbox-custom"></span>
               Overwrite existing files
             </label>
           </div>
-          
+
           <div class="option-group">
             <label class="form-label">Upload to folder:</label>
             <div class="folder-path">
@@ -98,11 +75,7 @@
         <button @click="$emit('close')" class="btn btn-secondary" :disabled="isUploading">
           Cancel
         </button>
-        <button
-          @click="handleUpload"
-          class="btn btn-primary"
-          :disabled="selectedFiles.length === 0 || isUploading"
-        >
+        <button @click="handleUpload" class="btn btn-primary" :disabled="selectedFiles.length === 0 || isUploading">
           <span v-if="isUploading" class="spinner"></span>
           {{ isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} file(s)` }}
         </button>
@@ -124,7 +97,8 @@ export default {
     const selectedFiles = ref([])
     const isDragOver = ref(false)
     const isUploading = ref(false)
-    
+    let dragCounter = 0
+
     const uploadOptions = ref({
       overwrite: false
     })
@@ -146,16 +120,20 @@ export default {
 
     const handleDrop = (event) => {
       event.preventDefault()
+      event.stopPropagation()
       isDragOver.value = false
-      
+
       const files = Array.from(event.dataTransfer.files)
-      addFiles(files)
+      if (files.length > 0) {
+        addFiles(files)
+      }
+      dragCounter = 0
     }
 
     const addFiles = (files) => {
       // Filter out duplicates and add new files
-      const newFiles = files.filter(file => 
-        !selectedFiles.value.some(existing => 
+      const newFiles = files.filter(file =>
+        !selectedFiles.value.some(existing =>
           existing.name === file.name && existing.size === file.size
         )
       )
@@ -170,10 +148,10 @@ export default {
       if (selectedFiles.value.length === 0) return
 
       isUploading.value = true
-      
+
       try {
         const result = await filesStore.uploadFiles(selectedFiles.value)
-        
+
         if (result.success) {
           emit('close')
         } else {
@@ -202,7 +180,7 @@ export default {
 
     const getFileIcon = (file) => {
       const extension = file.name.split('.').pop()?.toUpperCase()
-      
+
       const iconMap = {
         'PDF': 'fas fa-file-pdf text-red-500',
         'DOCX': 'fas fa-file-word text-blue-500',
@@ -224,8 +202,24 @@ export default {
         'RAR': 'fas fa-file-archive text-yellow-600',
         'TXT': 'fas fa-file-alt text-gray-500'
       }
-      
+
       return iconMap[extension] || 'fas fa-file text-gray-400'
+    }
+
+    const handleDragEnter = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      dragCounter++
+      isDragOver.value = true
+    }
+
+    const handleDragLeave = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      dragCounter--
+      if (dragCounter === 0) {
+        isDragOver.value = false
+      }
     }
 
     return {
@@ -243,7 +237,9 @@ export default {
       handleUpload,
       handleOverlayClick,
       formatFileSize,
-      getFileIcon
+      getFileIcon,
+      handleDragEnter,
+      handleDragLeave
     }
   }
 }
@@ -497,12 +493,12 @@ export default {
   transition: all 0.2s ease;
 }
 
-.checkbox-input:checked + .checkbox-custom {
+.checkbox-input:checked+.checkbox-custom {
   background-color: var(--primary-color);
   border-color: var(--primary-color);
 }
 
-.checkbox-input:checked + .checkbox-custom::after {
+.checkbox-input:checked+.checkbox-custom::after {
   content: '';
   position: absolute;
   left: 3px;
@@ -539,20 +535,20 @@ export default {
     margin: 0.5rem;
     max-width: none;
   }
-  
+
   .upload-area {
     padding: 1.5rem;
     min-height: 150px;
   }
-  
+
   .upload-prompt i {
     font-size: 2rem;
   }
-  
+
   .modal-footer {
     flex-direction: column;
   }
-  
+
   .modal-footer .btn {
     width: 100%;
   }

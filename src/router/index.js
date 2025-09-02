@@ -46,41 +46,59 @@ const routes = [
   {
     path: '/logout',
     name: 'Logout',
-    beforeEnter: (to, from, next) => {
+    beforeEnter: async (to, from, next) => {
       const authStore = useAuthStore()
-      authStore.logout()
-      next('/login')
+      await authStore.logout()
+      next({ name: 'Login' })
     }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/login'
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0 }
+    }
+  }
 })
 
-// Navigation guards
-router.beforeEach((to, from, next) => {
+// Navigation guard to check authentication
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   
-  // Check if route requires authentication
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
-    return
+  // Initialize auth state if not already done
+  if (!authStore.isInitialized) {
+    authStore.initializeAuth()
   }
   
-  // Check if route requires guest (not authenticated)
-  if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    next('/dashboard')
-    return
+  const isAuthenticated = authStore.isAuthenticated
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+
+  // Redirect to login if route requires authentication and user is not authenticated
+  if (requiresAuth && !isAuthenticated) {
+    return next({ name: 'Login', query: { redirect: to.fullPath } })
   }
-  
-  // Check if route requires admin role
-  if (to.meta.requiresAdmin && (!authStore.isAuthenticated || !authStore.isAdmin)) {
-    next('/dashboard')
-    return
+
+  // Redirect to dashboard if user is authenticated and tries to access guest-only routes
+  if (requiresGuest && isAuthenticated) {
+    return next({ name: 'Dashboard' })
   }
-  
+
+  // Check admin privileges if required
+  if (requiresAdmin && (!isAuthenticated || !authStore.isAdmin)) {
+    return next({ name: 'Dashboard' })
+  }
+
   next()
 })
 

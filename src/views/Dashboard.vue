@@ -46,8 +46,18 @@
             <i class="fas fa-hdd"></i>
           </div>
           <div class="stat-content">
-            <h3>{{ formatStorage(totalStorage) }}</h3>
+            <h3>{{ storageInGB }} GB</h3>
             <p>Storage Used</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon links">
+            <i class="fas fa-link"></i>
+          </div>
+          <div class="stat-content">
+            <h3>{{ filesStore.stats.totalLinks || 0 }}</h3>
+            <p>Total Links</p>
           </div>
         </div>
         
@@ -56,7 +66,7 @@
             <i class="fas fa-users"></i>
           </div>
           <div class="stat-content">
-            <h3>{{ totalUsers }}</h3>
+            <h3>{{ filesStore.stats.totalUsers }}</h3>
             <p>Active Users</p>
           </div>
         </div>
@@ -274,6 +284,10 @@ export default {
       ]
     })
     
+    const storageInGB = computed(() => {
+      return (filesStore.stats.totalStorageUsed / (1024 * 1024 * 1024)).toFixed(2)
+    })
+
     const refreshData = async () => {
       await filesStore.fetchStats()
     }
@@ -346,6 +360,7 @@ export default {
       totalStorage,
       totalUsers,
       recentFiles,
+      storageInGB,
       refreshData,
       formatStorage,
       formatFileSize,
@@ -434,6 +449,10 @@ export default {
 
 .stat-icon.users {
   background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.stat-icon.links {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .stat-content h3 {

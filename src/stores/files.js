@@ -1,17 +1,17 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import api from '../utils/axios'
 
 export const useFilesStore = defineStore('files', {
   state: () => ({
     currentPath: '/',
     currentFolderId: 0,
-    breadcrumbItems: [],  
+    breadcrumbItems: [],
     files: [],
     folders: [],
     selectedItems: [],
-    viewMode: 'grid', // 'grid' or 'list'
-    sortBy: 'name', // 'name', 'date', 'type', 'size'
-    sortOrder: 'asc', // 'asc' or 'desc'
+    viewMode: 'grid',
+    sortBy: 'name',
+    sortOrder: 'asc',
     searchQuery: '',
     isLoading: false,
     uploadProgress: 0,
@@ -19,6 +19,9 @@ export const useFilesStore = defineStore('files', {
     stats: {
       totalFolders: 0,
       totalFiles: 0,
+      totalStorageUsed: 0,
+      totalUsers: 0,
+      totalLinks: 0,
       filesByExtension: {}
     }
   }),
@@ -68,12 +71,7 @@ export const useFilesStore = defineStore('files', {
     },
 
     breadcrumbs: (state) => {
-      // This is a basic implementation - you'll need to populate breadcrumbItems
-      // from your API response or maintain it in the state
-      return [
-        { id: 0, name: 'Home' },
-        ...(state.breadcrumbItems || [])
-      ]
+      return state.breadcrumbItems
     }
   },
 
@@ -81,19 +79,13 @@ export const useFilesStore = defineStore('files', {
     async fetchFiles(id = 0) {
       this.isLoading = true
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/auth/items_and_folders/${id}`
-        )
+        const response = await api.get(`/auth/items_and_folders/${id}`)
 
         this.currentFolderId = id
         this.currentPath = response.data.data?.currentPath || '/'
         this.folders = response.data.data.folders || []
         this.files = response.data.data.files || []
         this.breadcrumbItems = response.data.data.breadcrumbs || []
-    
-
-        // If your API returns breadcrumb information, update it here
-        // Example: this.breadcrumbItems = response.data.data.breadcrumbs || []
 
         return { success: true }
       } catch (error) {
@@ -106,93 +98,72 @@ export const useFilesStore = defineStore('files', {
         this.isLoading = false
       }
     },
-    
+
     async fetchStats() {
       try {
-        // Mock stats for demo - removed HTTP request to prevent navigation interference
-        await new Promise(resolve => setTimeout(resolve, 100)) // Simulate brief loading
-
-        this.stats = {
-          totalFolders: 15,
-          totalFiles: 127,
-          filesByExtension: {
-            'PDF': 45,
-            'DOCX': 23,
-            'MP4': 12,
-            'JPG': 31,
-            'PNG': 16
-          }
-        }
-
+        const response = await api.get('/auth/stats')
+        this.stats = response.data.data
         return { success: true }
       } catch (error) {
         console.error('Fetch stats error:', error)
-        return { success: false }
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to load statistics'
+        }
       }
     },
 
-    async createFolder(name, path = this.currentPath) {
+    async createFolder(name, parentId = this.currentFolderId) {
       try {
-        // Mock folder creation - removed HTTP request to prevent navigation interference
-        await new Promise(resolve => setTimeout(resolve, 100)) // Simulate brief loading
-
-        // Mock: Add folder to current list
-        const newFolder = {
-          id: Date.now(),
+        const response = await api.post('/auth/folder', {
           name,
-          isFolder: true,
-          path: path + '/' + name,
-          createdAt: new Date().toISOString(),
-          modifiedAt: new Date().toISOString(),
-          owner: 'Current User'
-        }
+          parentId: parentId
+        })
 
-        this.folders.push(newFolder)
-
-        return { success: true }
+        this.folders.push(response.data.data)
+        return { success: true, message: 'Folder created successfully' }
       } catch (error) {
         console.error('Create folder error:', error)
-        return { success: false, message: 'Failed to create folder' }
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to create folder'
+        }
       }
     },
 
-    async uploadFiles(files, overwrite = false) {
+    async uploadFiles(fileList, overwrite = false) {
       this.uploadProgress = 0
       this.isUploading = true
 
       try {
-        // Mock file upload with progress
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i]
+        const formData = new FormData()
+        const filesArray = Array.from(fileList || [])
+        filesArray.forEach(file => {
+          formData.append('file', file)
+        })
+        formData.append('parentId', this.currentFolderId)
+        formData.append('overwrite', overwrite)
 
-          // Simulate upload progress
-          for (let progress = 0; progress <= 100; progress += 10) {
-            this.uploadProgress = Math.round(((i * 100) + progress) / files.length)
-            await new Promise(resolve => setTimeout(resolve, 100))
+        const response = await api.post('/auth/file', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          onUploadProgress: (progressEvent) => {
+            this.uploadProgress = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            )
           }
+        })
 
-          // Add file to store
-          const newFile = {
-            id: Date.now() + i,
-            name: file.name,
-            isFolder: false,
-            size: file.size,
-            type: 'file',
-            extension: file.name.split('.').pop()?.toLowerCase() || '',
-            mimeType: file.type,
-            createdAt: new Date().toISOString(),
-            modifiedAt: new Date().toISOString(),
-            owner: 'Current User',
-            isLink: false
-          }
-
-          this.files.push(newFile)
-        }
-
+        // Add new file to the current list
+        // this.files = [...this.files, ...response.data.data]
         return { success: true, message: 'Files uploaded successfully' }
       } catch (error) {
         console.error('Upload error:', error)
-        return { success: false, message: 'Upload failed' }
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Upload failed'
+        }
       } finally {
         this.isUploading = false
         this.uploadProgress = 0
@@ -201,37 +172,33 @@ export const useFilesStore = defineStore('files', {
 
     async uploadLink(url, name) {
       try {
-        // Mock API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const response = await api.post('/auth/link', {
+          filePath: url,
+          name,
+          parentId: this.currentFolderId
+        })
 
-        const newLink = {
-          id: Date.now(),
-          name: name,
-          isFolder: false,
-          url: url,
-          type: 'link',
-          extension: 'LINK',
-          createdAt: new Date().toISOString(),
-          modifiedAt: new Date().toISOString(),
-          owner: 'Current User',
-          isLink: true
-        }
-
-        this.files.push(newLink)
+        this.files.push(response.data.data)
         return { success: true, message: 'Link added successfully' }
       } catch (error) {
         console.error('Upload link error:', error)
-        return { success: false, message: 'Failed to add link' }
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to add link'
+        }
       }
     },
 
     async deleteItems(items) {
       this.isLoading = true
       try {
-        // Replace with actual API endpoint
-        await axios.delete('https://api.example.com/items', { data: { items } })
+        await Promise.all(
+          items.map(item =>
+            api.delete(`/auth/items/${item.id}`)
+          )
+        )
 
-        // Mock: Remove items from lists
+        // Remove deleted items from state
         items.forEach(item => {
           if (item.isFolder) {
             this.folders = this.folders.filter(f => f.id !== item.id)
@@ -241,13 +208,40 @@ export const useFilesStore = defineStore('files', {
         })
 
         this.selectedItems = []
-
-        return { success: true }
+        return { success: true, message: 'Items deleted successfully' }
       } catch (error) {
         console.error('Delete error:', error)
-        return { success: false, message: 'Failed to delete items' }
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to delete items'
+        }
       } finally {
         this.isLoading = false
+      }
+    },
+
+    async renameItem({ id, name, type }) {
+      try {
+        const endpoint = type === 'folder' ? '/auth/folder' : '/auth/file';
+        const response = await api.put(`${endpoint}/${id}/rename`, { name });
+
+        // Update the item in the state
+        if (type === 'folder') {
+          const index = this.folders.findIndex(f => f.id === id);
+          if (index !== -1) {
+            this.folders[index] = { ...this.folders[index], name };
+          }
+        } else {
+          const index = this.files.findIndex(f => f.id === id);
+          if (index !== -1) {
+            this.files[index] = { ...this.files[index], name };
+          }
+        }
+
+        return { success: true, message: 'Item renamed successfully' };
+      } catch (error) {
+        console.error('Rename error:', error);
+        throw error; // Re-throw to let the component handle the error
       }
     },
 
@@ -256,11 +250,14 @@ export const useFilesStore = defineStore('files', {
     },
 
     setSorting(sortBy, sortOrder = null) {
-      if (this.sortBy === sortBy && !sortOrder) {
-        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc'
+      this.sortBy = sortBy
+      if (sortOrder) {
+        this.sortOrder = sortOrder
       } else {
-        this.sortBy = sortBy
-        this.sortOrder = sortOrder || 'asc'
+        // Toggle if same sortBy, otherwise default to asc
+        this.sortOrder = this.sortBy === sortBy
+          ? this.sortOrder === 'asc' ? 'desc' : 'asc'
+          : 'asc'
       }
     },
 
@@ -281,78 +278,45 @@ export const useFilesStore = defineStore('files', {
       this.selectedItems = []
     },
 
-    generateMockData(path) {
-      // Generate mock folders and files for demo
-      const folders = [
+    // Helper method for development
+    generateMockData() {
+      // This is a mock data generator for development
+      // Remove in production or when API is fully implemented
+      const mockFolders = [
         {
           id: 1,
           name: 'Documents',
           isFolder: true,
-          path: path + '/Documents',
-          createdAt: '2024-01-15T10:30:00Z',
-          modifiedAt: '2024-01-20T14:22:00Z',
-          owner: 'John Doe'
+          createdAt: new Date().toISOString(),
+          modifiedAt: new Date().toISOString(),
+          owner: 'Current User'
         },
         {
           id: 2,
           name: 'Images',
           isFolder: true,
-          path: path + '/Images',
-          createdAt: '2024-01-10T09:15:00Z',
-          modifiedAt: '2024-01-25T16:45:00Z',
-          owner: 'Jane Smith'
-        },
-        {
-          id: 3,
-          name: 'Videos',
-          isFolder: true,
-          path: path + '/Videos',
-          createdAt: '2024-01-05T11:20:00Z',
-          modifiedAt: '2024-01-22T13:30:00Z',
-          owner: 'Admin User'
+          createdAt: new Date().toISOString(),
+          modifiedAt: new Date().toISOString(),
+          owner: 'Current User'
         }
       ]
 
-      const files = [
+      const mockFiles = [
         {
-          id: 4,
-          name: 'Project Report.pdf',
+          id: 101,
+          name: 'example.pdf',
           isFolder: false,
-          size: 2048576,
+          size: 1024 * 1024 * 2.5, // 2.5MB
           type: 'application/pdf',
-          extension: 'PDF',
-          createdAt: '2024-01-18T14:30:00Z',
-          modifiedAt: '2024-01-19T09:15:00Z',
-          owner: 'John Doe',
-          isLink: false
-        },
-        {
-          id: 5,
-          name: 'Meeting Notes.docx',
-          isFolder: false,
-          size: 524288,
-          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          extension: 'DOCX',
-          createdAt: '2024-01-17T16:45:00Z',
-          modifiedAt: '2024-01-17T16:45:00Z',
-          owner: 'Jane Smith',
-          isLink: false
-        },
-        {
-          id: 6,
-          name: 'Google Docs Link',
-          isFolder: false,
-          url: 'https://docs.google.com/document/d/example',
-          type: 'link',
-          extension: 'LINK',
-          createdAt: '2024-01-16T12:00:00Z',
-          modifiedAt: '2024-01-16T12:00:00Z',
-          owner: 'Admin User',
-          isLink: true
+          extension: 'pdf',
+          createdAt: new Date().toISOString(),
+          modifiedAt: new Date().toISOString(),
+          owner: 'Current User'
         }
       ]
 
-      return { folders, files }
+      this.folders = mockFolders
+      this.files = mockFiles
     }
   }
 })

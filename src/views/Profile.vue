@@ -19,25 +19,14 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Full Name</label>
-              <input
-                v-model="profileForm.name"
-                type="text"
-                class="form-input"
-                :class="{ error: errors.name }"
-                required
-              >
+              <input v-model="profileForm.name" type="text" class="form-input" :class="{ error: errors.name }" required>
               <div v-if="errors.name" class="form-error">{{ errors.name }}</div>
             </div>
 
             <div class="form-group">
               <label class="form-label">Username</label>
-              <input
-                v-model="profileForm.username"
-                type="text"
-                class="form-input"
-                :class="{ error: errors.username }"
-                required
-              >
+              <input v-model="profileForm.username" type="text" class="form-input" :class="{ error: errors.username }"
+                required>
               <div v-if="errors.username" class="form-error">{{ errors.username }}</div>
             </div>
           </div>
@@ -55,11 +44,7 @@
           </div> -->
 
           <div class="form-actions">
-            <button
-              type="submit"
-              class="btn btn-primary"
-              :disabled="isUpdatingProfile"
-            >
+            <button type="submit" class="btn btn-primary" :disabled="isUpdatingProfile">
               <span v-if="isUpdatingProfile" class="spinner"></span>
               {{ isUpdatingProfile ? 'Updating...' : 'Update Profile' }}
             </button>
@@ -78,18 +63,9 @@
           <div class="form-group">
             <label class="form-label">Current Password</label>
             <div class="password-input-wrapper">
-              <input
-                v-model="passwordForm.currentPassword"
-                :type="showCurrentPassword ? 'text' : 'password'"
-                class="form-input"
-                :class="{ error: errors.currentPassword }"
-                required
-              >
-              <button
-                type="button"
-                @click="showCurrentPassword = !showCurrentPassword"
-                class="password-toggle"
-              >
+              <input v-model="passwordForm.currentPassword" :type="showCurrentPassword ? 'text' : 'password'"
+                class="form-input" :class="{ error: errors.currentPassword }" required>
+              <button type="button" @click="showCurrentPassword = !showCurrentPassword" class="password-toggle">
                 <i :class="showCurrentPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
               </button>
             </div>
@@ -99,18 +75,9 @@
           <div class="form-group">
             <label class="form-label">New Password</label>
             <div class="password-input-wrapper">
-              <input
-                v-model="passwordForm.newPassword"
-                :type="showNewPassword ? 'text' : 'password'"
-                class="form-input"
-                :class="{ error: errors.newPassword }"
-                required
-              >
-              <button
-                type="button"
-                @click="showNewPassword = !showNewPassword"
-                class="password-toggle"
-              >
+              <input v-model="passwordForm.newPassword" :type="showNewPassword ? 'text' : 'password'" class="form-input"
+                :class="{ error: errors.newPassword }" required>
+              <button type="button" @click="showNewPassword = !showNewPassword" class="password-toggle">
                 <i :class="showNewPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
               </button>
             </div>
@@ -129,18 +96,9 @@
           <div class="form-group">
             <label class="form-label">Confirm New Password</label>
             <div class="password-input-wrapper">
-              <input
-                v-model="passwordForm.confirmPassword"
-                :type="showConfirmPassword ? 'text' : 'password'"
-                class="form-input"
-                :class="{ error: errors.confirmPassword }"
-                required
-              >
-              <button
-                type="button"
-                @click="showConfirmPassword = !showConfirmPassword"
-                class="password-toggle"
-              >
+              <input v-model="passwordForm.confirmPassword" :type="showConfirmPassword ? 'text' : 'password'"
+                class="form-input" :class="{ error: errors.confirmPassword }" required>
+              <button type="button" @click="showConfirmPassword = !showConfirmPassword" class="password-toggle">
                 <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
               </button>
             </div>
@@ -148,11 +106,7 @@
           </div>
 
           <div class="form-actions">
-            <button
-              type="submit"
-              class="btn btn-primary"
-              :disabled="!isPasswordValid || isChangingPassword"
-            >
+            <button type="submit" class="btn btn-primary" :disabled="!isPasswordValid || isChangingPassword">
               <span v-if="isChangingPassword" class="spinner"></span>
               {{ isChangingPassword ? 'Changing...' : 'Change Password' }}
             </button>
@@ -224,12 +178,15 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useRouter } from 'vue-router'
+import api from '../utils/axios'
 
 export default {
   name: 'Profile',
   setup() {
     const authStore = useAuthStore()
-    
+    const router = useRouter()
+
     const isUpdatingProfile = ref(false)
     const isChangingPassword = ref(false)
     const showCurrentPassword = ref(false)
@@ -237,19 +194,19 @@ export default {
     const showConfirmPassword = ref(false)
     const successMessage = ref('')
     const errorMessage = ref('')
-    
+
     const profileForm = ref({
       name: '',
       username: '',
       // bio: ''
     })
-    
+
     const passwordForm = ref({
       currentPassword: '',
       newPassword: '',
       confirmPassword: ''
     })
-    
+
     const errors = ref({
       name: '',
       username: '',
@@ -269,9 +226,16 @@ export default {
     })
 
     const isPasswordValid = computed(() => {
-      return Object.values(passwordValidation.value).every(valid => valid) &&
-             passwordForm.value.newPassword === passwordForm.value.confirmPassword &&
-             passwordForm.value.currentPassword
+      // Check if all password validations pass
+      const validations = Object.values(passwordValidation.value).every(valid => valid)
+      
+      // Check if passwords match and are not empty
+      const passwordsMatch = passwordForm.value.newPassword === passwordForm.value.confirmPassword
+      const newPasswordFilled = passwordForm.value.newPassword.length > 0
+      const confirmPasswordFilled = passwordForm.value.confirmPassword.length > 0
+      const currentPasswordFilled = passwordForm.value.currentPassword.length > 0
+      
+      return validations && passwordsMatch && newPasswordFilled && confirmPasswordFilled && currentPasswordFilled
     })
 
     const formatDate = (dateString) => {
@@ -335,46 +299,48 @@ export default {
     }
 
     const updateProfile = async () => {
-      clearMessages()
-      
       if (!validateProfileForm()) return
-
-      isUpdatingProfile.value = true
-
-      try {
-        const result = await authStore.updateProfile(profileForm.value)
-        
-        if (result.success) {
-          successMessage.value = 'Profile updated successfully!'
-          setTimeout(() => {
-            successMessage.value = ''
-          }, 3000)
-        } else {
-          errorMessage.value = result.message || 'Failed to update profile'
+      
+      if (confirm(`Are you sure you want to update your profile?`)) {
+        isUpdatingProfile.value = true
+        try {
+          const result = await authStore.updateProfile({
+            name: profileForm.value.name,
+            username: profileForm.value.username
+          })
+          
+          if (result.success) {
+            successMessage.value = result.message || 'Profile updated successfully!'
+            setTimeout(() => { successMessage.value = '' }, 3000)
+          } else {
+            errorMessage.value = result.message || 'Failed to update profile'
+            setTimeout(() => { errorMessage.value = '' }, 3000)
+          }
+        } catch (error) {
+          console.error('Update profile error:', error)
+          errorMessage.value = error.message || 'Failed to update profile. Please try again.'
+          setTimeout(() => { errorMessage.value = '' }, 3000)
+        } finally {
+          isUpdatingProfile.value = false
         }
-      } catch (error) {
-        console.error('Update profile error:', error)
-        errorMessage.value = 'Failed to update profile. Please try again.'
-      } finally {
-        isUpdatingProfile.value = false
       }
     }
 
     const changePassword = async () => {
       clearMessages()
-      
+
       if (!validatePasswordForm()) return
 
       isChangingPassword.value = true
 
       try {
-        const result = await authStore.changePassword(
-          passwordForm.value.currentPassword,
-          passwordForm.value.newPassword
-        )
-        
+        const result = await authStore.changePassword({
+          newPassword: passwordForm.value.newPassword,
+          confirmPassword: passwordForm.value.confirmPassword
+        })
+
         if (result.success) {
-          successMessage.value = 'Password changed successfully!'
+          successMessage.value = result.message || 'Password changed successfully!'
           passwordForm.value = {
             currentPassword: '',
             newPassword: '',
@@ -388,7 +354,7 @@ export default {
         }
       } catch (error) {
         console.error('Change password error:', error)
-        errorMessage.value = 'Failed to change password. Please try again.'
+        errorMessage.value = error.response?.data?.message || 'Failed to change password. Please try again.'
       } finally {
         isChangingPassword.value = false
       }
@@ -396,8 +362,8 @@ export default {
 
     // Watch for password confirmation
     watch(() => passwordForm.value.confirmPassword, () => {
-      if (passwordForm.value.confirmPassword && 
-          passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+      if (passwordForm.value.confirmPassword &&
+        passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
         errors.value.confirmPassword = 'Passwords do not match'
       } else {
         errors.value.confirmPassword = ''
@@ -405,13 +371,19 @@ export default {
     })
 
     onMounted(() => {
+      // Initialize auth state
+      authStore.initializeAuth()
+
       // Initialize form with current user data
       if (authStore.user) {
         profileForm.value = {
-          name: authStore.user.name || '',
+          name: authStore.user.fullname || '',
           username: authStore.user.username || '',
           // bio: authStore.user.bio || ''
         }
+      } else {
+        // If still no user, redirect to login
+        router.push('/login')
       }
     })
 
@@ -650,21 +622,21 @@ export default {
   .profile {
     padding: 1rem;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .info-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .info-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .alert {
     top: 1rem;
     right: 1rem;

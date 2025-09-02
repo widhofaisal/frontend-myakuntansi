@@ -96,7 +96,7 @@
               <label class="form-label">Username</label>
               <input v-model="newUser.username" type="text" class="form-input" required>
             </div>
-            
+
             <div class="form-group">
               <label class="form-label">Full Name</label>
               <input v-model="newUser.fullname" type="text" class="form-input" required>
@@ -128,16 +128,27 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit User Modal -->
+    <EditUserModal
+      v-if="showEditUserModal && selectedUser"
+      :user="selectedUser"
+      @close="showEditUserModal = false"
+      @saved="handleUserUpdated"
+    />
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import axios from 'axios'
+import api from '../utils/axios'
+import EditUserModal from '../components/modals/EditUserModal.vue'
 
 export default {
-  name: 'UserManagement',
+  components: {
+    EditUserModal
+  },
   setup() {
     const authStore = useAuthStore()
 
@@ -146,6 +157,8 @@ export default {
     const roleFilter = ref('')
     const showCreateUserModal = ref(false)
     const isCreating = ref(false)
+    const showEditUserModal = ref(false)
+    const selectedUser = ref(null)
 
     const newUser = ref({
       username: '',
@@ -182,9 +195,13 @@ export default {
     }
 
     const loadUsers = async () => {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/auth/users`)
-      console.log(response.data.data)
-      users.value = response.data.data
+      try {
+        const response = await api.get('/auth/users')
+        users.value = response.data.data
+      } catch (error) {
+        console.error('Error loading users:', error)
+        alert('Failed to load users: ' + (error.response?.data?.message || error.message))
+      }
     }
 
     const createUser = async () => {
@@ -195,23 +212,17 @@ export default {
       isCreating.value = true
 
       try {
-        // Make POST request to create user
-        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/users`, {
+        const response = await api.post('/auth/users', {
           username: newUser.value.username,
           fullname: newUser.value.fullname,
           password: newUser.value.password,
           role: newUser.value.role
         })
 
-        // Add the created user to the local list
         users.value.push(response.data.data)
         closeCreateUserModal()
-        
-        // Optionally reload the users list to ensure sync
-        // await loadUsers()
       } catch (error) {
         console.error('Create user error:', error)
-        // Handle error - you might want to show an error message to the user
         alert('Failed to create user: ' + (error.response?.data?.message || error.message))
       } finally {
         isCreating.value = false
@@ -221,22 +232,55 @@ export default {
     const promoteUser = async (user) => {
       if (confirm(`Promote ${user.name} to admin?`)) {
         user.role = 'admin'
-        // Mock API call
-        console.log('User promoted:', user)
+        try {
+          const response = await api.put(`/auth/users/${user.id}`, {
+            role: user.role
+          })
+          console.log('User promoted:', response.data.data)
+        } catch (error) {
+          console.error('Promote user error:', error)
+          alert('Failed to promote user: ' + (error.response?.data?.message || error.message))
+        }
       }
     }
 
     const demoteUser = async (user) => {
       if (confirm(`Demote ${user.name} to regular user?`)) {
         user.role = 'user'
-        // Mock API call
-        console.log('User demoted:', user)
+        try {
+          const response = await api.put(`/auth/users/${user.id}`, {
+            role: user.role
+          })
+          console.log('User demoted:', response.data.data)
+        } catch (error) {
+          console.error('Demote user error:', error)
+          alert('Failed to demote user: ' + (error.response?.data?.message || error.message))
+        }
       }
     }
 
     const editUser = (user) => {
-      console.log('Edit user:', user)
-      // Implement edit functionality
+      selectedUser.value = { ...user }
+      showEditUserModal.value = true
+    }
+
+    const handleUserUpdated = async (updatedData) => {
+      try {
+        const response = await api.put(`/auth/users/${selectedUser.value.id}`, updatedData)
+        const updatedUser = response.data.data
+        
+        // Update the user in the users list
+        const index = users.value.findIndex(u => u.id === updatedUser.id)
+        if (index !== -1) {
+          users.value[index] = { ...users.value[index], ...updatedUser }
+        }
+        
+        // Close the modal
+        showEditUserModal.value = false
+      } catch (error) {
+        console.error('Update user error:', error)
+        alert('Failed to update user: ' + (error.response?.data?.message || error.message))
+      }
     }
 
     const deleteUser = async (user) => {
@@ -245,8 +289,13 @@ export default {
         if (index > -1) {
           users.value.splice(index, 1)
         }
-        // Mock API call
-        console.log('User deleted:', user)
+        try {
+          const response = await api.delete(`/auth/users/${user.id}`)
+          console.log('User deleted:', response.data.data)
+        } catch (error) {
+          console.error('Delete user error:', error)
+          alert('Failed to delete user: ' + (error.response?.data?.message || error.message))
+        }
       }
     }
 
@@ -271,6 +320,8 @@ export default {
       roleFilter,
       showCreateUserModal,
       isCreating,
+      showEditUserModal,
+      selectedUser,
       newUser,
       filteredUsers,
       formatDate,
@@ -278,6 +329,7 @@ export default {
       promoteUser,
       demoteUser,
       editUser,
+      handleUserUpdated,
       deleteUser,
       closeCreateUserModal
     }

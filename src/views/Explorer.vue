@@ -10,18 +10,15 @@
             {{ filesStore.breadcrumbs }}
             {{ filesStore.breadcrumbItems }}
           </div>
-          
-          <button 
-            v-for="(crumb, index) in filesStore.breadcrumbs" 
-            :key="index" 
-            @click="navigateToPath(crumb.id)"
-            class="breadcrumb-item" 
-            :class="{ active: index === filesStore.breadcrumbs.length - 1 }"
-          >
-            <i v-if="index === 0" class="fas fa-home"></i>
-            <span v-else>{{ crumb.name }}</span>
-            <i v-if="index < filesStore.breadcrumbs.length - 1" class="fas fa-chevron-right separator"></i>
-          </button>
+          <template v-for="(crumb, index) in breadcrumbs" :key="crumb.id ?? index">
+            <button class="breadcrumb-item" :class="{ active: index === breadcrumbs.length - 1 }"
+              :disabled="index === breadcrumbs.length - 1"
+              @click="index === breadcrumbs.length - 1 ? null : navigateToPath(crumb.id)">
+              <i v-if="index === 0" class="fas fa-home"></i>
+              <span v-else>{{ crumb.name }}</span>
+            </button>
+            <i v-if="index < breadcrumbs.length - 1" class="fas fa-chevron-right separator"></i>
+          </template>
         </div>
 
         <!-- Actions -->
@@ -118,7 +115,8 @@
               <button @click.stop="showItemDetails(item)" class="action-btn" title="Details">
                 <i class="fas fa-info-circle"></i>
               </button>
-              <button @click.stop="downloadItem(item)" class="action-btn" title="Download">
+              <button v-if="!item.isFolder && !item.isLink" @click.stop="downloadItem(item)" class="action-btn"
+                title="Download">
                 <i class="fas fa-download"></i>
               </button>
               <button @click.stop="deleteItem(item)" class="action-btn text-danger" title="Delete">
@@ -163,7 +161,8 @@
               <button @click.stop="showItemDetails(item)" class="action-btn" title="Details">
                 <i class="fas fa-info-circle"></i>
               </button>
-              <button @click.stop="downloadItem(item)" class="action-btn" title="Download">
+              <button v-if="!item.isFolder && !item.isLink" @click.stop="downloadItem(item)" class="action-btn"
+                title="Download">
                 <i class="fas fa-download"></i>
               </button>
               <button @click.stop="deleteItem(item)" class="action-btn text-danger" title="Delete">
@@ -187,17 +186,29 @@
     <UploadModal v-if="showUploadModal" @close="showUploadModal = false" />
     <CreateFolderModal v-if="showCreateFolderModal" @close="showCreateFolderModal = false" />
     <UploadLinkModal v-if="showUploadLinkModal" @close="showUploadLinkModal = false" />
-    <ItemDetailsModal v-if="showDetailsModal" :item="selectedItemForDetails" @close="showDetailsModal = false" />
+    <ItemDetailsModal 
+      v-if="showDetailsModal" 
+      :item="selectedItemForDetails" 
+      @close="showDetailsModal = false"
+      @edit="editItem"
+    />
+    <EditItemModal
+      v-if="showEditModal"
+      :item="editingItem"
+      @close="showEditModal = false"
+      @saved="handleItemUpdated"
+    />
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useFilesStore } from '../stores/files'
 import UploadModal from '../components/modals/UploadModal.vue'
 import CreateFolderModal from '../components/modals/CreateFolderModal.vue'
 import UploadLinkModal from '../components/modals/UploadLinkModal.vue'
 import ItemDetailsModal from '../components/modals/ItemDetailsModal.vue'
+import EditItemModal from '../components/modals/EditItemModal.vue'
 
 export default {
   name: 'Explorer',
@@ -205,19 +216,32 @@ export default {
     UploadModal,
     CreateFolderModal,
     UploadLinkModal,
-    ItemDetailsModal
+    ItemDetailsModal,
+    EditItemModal
   },
   setup() {
     const filesStore = useFilesStore()
+
+    const breadcrumbs = computed(() => {
+      const arr = filesStore.breadcrumbs || []
+      if (!arr.length || arr[0]?.id !== 0) {
+        return [{ id: 0, name: 'Home' }, ...arr]
+      }
+      // Ensure each item has a name fallback
+      return arr.map((c, i) => ({ id: c.id, name: c.name || (i === 0 ? 'Home' : 'Folder') }))
+    })
 
     const isDragOver = ref(false)
     const showUploadModal = ref(false)
     const showCreateFolderModal = ref(false)
     const showUploadLinkModal = ref(false)
     const showDetailsModal = ref(false)
+    const showEditModal = ref(false)
     const selectedItemForDetails = ref(null)
+    const editingItem = ref(null)
 
     const navigateToPath = async (id) => {
+      if (id === filesStore.currentFolderId) return
       await filesStore.fetchFiles(id)
     }
 
@@ -244,10 +268,12 @@ export default {
 
     const handleDrop = async (event) => {
       event.preventDefault()
+      event.stopPropagation()  // Prevent event from bubbling up
       isDragOver.value = false
 
-      const files = Array.from(event.dataTransfer.files)
-      if (files.length > 0) {
+      // Only process if we have files and no modal is open
+      if (event.dataTransfer.files.length > 0 && !showUploadModal.value) {
+        const files = Array.from(event.dataTransfer.files)
         await filesStore.uploadFiles(files)
       }
     }
@@ -293,14 +319,6 @@ export default {
         alert('Failed to download file. Please try again.')
       }
     }
-    // const downloadItem = (item) => {
-    //   if (item.isLink) {
-    //     window.open(item.path, '_blank')
-    //   } else {
-    //     // In a real app, this would trigger a download from the server
-    //     console.log('Downloading:', item.name)
-    //   }
-    // }
 
     const deleteItem = async (item) => {
       if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
@@ -316,6 +334,16 @@ export default {
       selectedItemForDetails.value = item
       showDetailsModal.value = true
     }
+
+    const editItem = (item) => {
+      editingItem.value = { ...item };
+      showEditModal.value = true;
+    };
+
+    const handleItemUpdated = () => {
+      // Refresh the file list to show the updated name
+      filesStore.fetchFiles(filesStore.currentFolderId);
+    };
 
     const formatFileSize = (bytes) => {
       if (!bytes) return '0 B'
@@ -367,12 +395,15 @@ export default {
 
     return {
       filesStore,
+      breadcrumbs,
       isDragOver,
       showUploadModal,
       showCreateFolderModal,
       showUploadLinkModal,
       showDetailsModal,
+      showEditModal,
       selectedItemForDetails,
+      editingItem,
       navigateToPath,
       handleSortChange,
       toggleSortOrder,
@@ -380,6 +411,8 @@ export default {
       handleDrop,
       downloadItem,
       deleteItem,
+      editItem,
+      handleItemUpdated,
       showItemDetails,
       formatFileSize,
       formatDate,

@@ -19,7 +19,6 @@
             <p class="item-type">{{ getItemTypeLabel(item) }}</p>
           </div>
         </div>
-
         <!-- Item Details -->
         <div class="details-section">
           <h5>General Information</h5>
@@ -28,42 +27,47 @@
               <span class="detail-label">Name:</span>
               <span class="detail-value">{{ item.name }}</span>
             </div>
-            
+
             <div class="detail-item">
               <span class="detail-label">Type:</span>
               <span class="detail-value">{{ getItemTypeLabel(item) }}</span>
             </div>
-            
+
             <div v-if="item.type === 'file'" class="detail-item">
+              <span class="detail-label">Format:</span>
+              <span class="detail-value">{{ '.' + item.type }}</span>
+            </div>
+            
+            <div v-if="!item.isFolder && !item.isLink" class="detail-item">
               <span class="detail-label">Size:</span>
               <span class="detail-value">{{ formatFileSize(item.size) }}</span>
             </div>
             
-            <div v-if="item.type === 'folder'" class="detail-item">
+            <!-- <div v-if="item.isFolder" class="detail-item">
               <span class="detail-label">Contents:</span>
               <span class="detail-value">{{ getFolderContents(item) }}</span>
-            </div>
+            </div> -->
             
             <div class="detail-item">
               <span class="detail-label">Created:</span>
               <span class="detail-value">{{ formatDate(item.createdAt) }}</span>
             </div>
             
-            <div class="detail-item">
+            <div v-if="item.isFolder" class="detail-item">
               <span class="detail-label">Modified:</span>
-              <span class="detail-value">{{ formatDate(item.modifiedAt) }}</span>
+              <span class="detail-value">{{ formatDate(item.updatedAt) }}</span>
             </div>
             
             <div class="detail-item">
               <span class="detail-label">Location:</span>
-              <span class="detail-value">{{ item.path || '/' }}</span>
+              <span class="detail-value">{{ filesStore.currentPath }}</span>
             </div>
             
             <div v-if="item.isLink" class="detail-item">
               <span class="detail-label">URL:</span>
               <span class="detail-value">
-                <a :href="item.url" target="_blank" rel="noopener noreferrer" class="link-url">
-                  {{ item.url }}
+                <a :href="item.path" target="_blank" rel="noopener noreferrer" class="link-url">
+                  {{ item.path }}
                   <i class="fas fa-external-link-alt"></i>
                 </a>
               </span>
@@ -150,7 +154,7 @@
           </button>
           <button @click="editItem" class="btn btn-primary">
             <i class="fas fa-edit"></i>
-            Edit
+            Rename
           </button>
         </div>
       </div>
@@ -160,6 +164,7 @@
 
 <script>
 import { computed } from 'vue'
+import { useFilesStore } from '../../stores/files'
 
 export default {
   name: 'ItemDetailsModal',
@@ -171,6 +176,7 @@ export default {
   },
   emits: ['close', 'edit', 'download'],
   setup(props, { emit }) {
+    const filesStore = useFilesStore()
     const getItemIcon = (item) => {
       if (item.type === 'folder') {
         return 'fas fa-folder text-blue-500'
@@ -305,8 +311,8 @@ export default {
     }
 
     const openLink = () => {
-      if (props.item.url) {
-        window.open(props.item.url, '_blank', 'noopener,noreferrer')
+      if (props.item.path) {
+        window.open(props.item.path, '_blank', 'noopener,noreferrer')
       }
     }
 
@@ -329,7 +335,8 @@ export default {
       downloadItem,
       openLink,
       editItem,
-      handleOverlayClick
+      handleOverlayClick,
+      filesStore
     }
   }
 }

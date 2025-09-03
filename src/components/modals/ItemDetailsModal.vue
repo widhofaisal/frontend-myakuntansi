@@ -97,7 +97,7 @@
         </div>
 
         <!-- Permissions section -->
-        <div class="details-section">
+        <!-- <div class="details-section">
           <h5>Permissions</h5>
           <div class="permissions-grid">
             <div class="permission-item">
@@ -121,7 +121,7 @@
               <span class="permission-status granted">✓</span>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <!-- Share information -->
         <div v-if="item.shared" class="details-section">

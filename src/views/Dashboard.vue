@@ -222,6 +222,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+import Swal from 'sweetalert2'
 import { useAuthStore } from '../stores/auth'
 import { useFilesStore } from '../stores/files'
 import FileExtensionChart from '../components/charts/FileExtensionChart.vue'
@@ -289,7 +290,32 @@ export default {
     })
 
     const refreshData = async () => {
-      await filesStore.fetchStats()
+      try {
+        await filesStore.fetchStats()
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Dashboard has been refreshed',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          background: 'var(--surface-color)',
+          color: 'var(--text-primary)',
+        })
+      } catch (error) {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'error',
+          title: 'Failed to refresh data',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          background: 'var(--surface-color)',
+          color: 'var(--text-primary)',
+        })
+      }
     }
     
     const formatStorage = (bytes) => {

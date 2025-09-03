@@ -14,7 +14,6 @@
           <h2>Profile Information</h2>
           <p>Update your personal information and preferences</p>
         </div>
-
         <form @submit.prevent="updateProfile" class="profile-form">
           <div class="form-row">
             <div class="form-group">
@@ -329,12 +328,16 @@ export default {
     const changePassword = async () => {
       clearMessages()
 
-      if (!validatePasswordForm()) return
+      if (!isPasswordValid.value) {
+        errorMessage.value = 'Please fill out the form correctly and ensure passwords match.'
+        return
+      }
 
       isChangingPassword.value = true
 
       try {
         const result = await authStore.changePassword({
+          currentPassword: passwordForm.value.currentPassword,
           newPassword: passwordForm.value.newPassword,
           confirmPassword: passwordForm.value.confirmPassword
         })
@@ -632,7 +635,7 @@ export default {
   }
 
   .info-item {
-    flex-direction: column;
+    flex-direction: column;  
     align-items: flex-start;
     gap: 0.5rem;
   }

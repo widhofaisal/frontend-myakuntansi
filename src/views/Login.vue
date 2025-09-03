@@ -113,6 +113,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import Swal from 'sweetalert2'
 
 export default {
   name: 'Login',
@@ -170,7 +171,14 @@ export default {
       if (result.success) {
         router.push('/dashboard')
       } else {
-        errors.general = result.message || 'Login failed. Please try again.'
+        Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: result.message || 'Incorrect username or password. Please try again.',
+          confirmButtonColor: 'var(--primary-color)',
+          background: 'var(--surface-color)',
+          color: 'var(--text-primary)',
+        })
       }
     }
     

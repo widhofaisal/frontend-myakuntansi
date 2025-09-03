@@ -36,8 +36,8 @@ api.interceptors.response.use(
     const originalRequest = error.config
     const authStore = useAuthStore()
     
-    // Check if the error is due to an expired token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Check if the error is due to an expired token and not a login attempt
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.endsWith('/login')) {
       originalRequest._retry = true
       
       // Ensure loading overlay is hidden before showing the dialog

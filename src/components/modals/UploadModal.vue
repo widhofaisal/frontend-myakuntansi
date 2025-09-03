@@ -150,16 +150,11 @@ export default {
       isUploading.value = true
 
       try {
-        const result = await filesStore.uploadFiles(selectedFiles.value)
-
-        if (result.success) {
-          emit('close')
-        } else {
-          alert(result.message || 'Upload failed')
-        }
+        await filesStore.uploadFiles(selectedFiles.value)
+        emit('close')
       } catch (error) {
         console.error('Upload error:', error)
-        alert('Upload failed. Please try again.')
+        // Error is already handled by the store's toast notification
       } finally {
         isUploading.value = false
       }

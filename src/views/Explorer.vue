@@ -204,11 +204,13 @@
 <script>
 import { ref, onMounted, computed } from 'vue'
 import { useFilesStore } from '../stores/files'
+import { useRouter, useRoute } from 'vue-router'
 import UploadModal from '../components/modals/UploadModal.vue'
 import CreateFolderModal from '../components/modals/CreateFolderModal.vue'
 import UploadLinkModal from '../components/modals/UploadLinkModal.vue'
 import ItemDetailsModal from '../components/modals/ItemDetailsModal.vue'
 import EditItemModal from '../components/modals/EditItemModal.vue'
+import Swal from 'sweetalert2'
 
 export default {
   name: 'Explorer',
@@ -316,19 +318,44 @@ export default {
 
       } catch (error) {
         console.error('Download failed:', error)
-        alert('Failed to download file. Please try again.')
+        await Swal.fire({
+          icon: 'error',
+          title: 'Download failed',
+          text: 'Please try again.'
+        })
       }
     }
 
     const deleteItem = async (item) => {
-      if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete "${item.name}". This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+      });
+
+      if (result.isConfirmed) {
         try {
-          await filesStore.deleteItems([item])
+          await filesStore.deleteItems([item]);
+          // await Swal.fire(
+          //   'Deleted!',
+          //   'Your file has been deleted.',
+          //   'success'
+          // );
         } catch (error) {
-          console.error('Error deleting item:', error)
+          console.error('Error deleting item:', error);
+          await Swal.fire(
+            'Error!',
+            'There was an error deleting the file.',
+            'error'
+          );
         }
       }
-    }
+    };
 
     const showItemDetails = (item) => {
       selectedItemForDetails.value = item

@@ -29,7 +29,7 @@
         <!-- User Menu -->
         <div class="user-menu">
           <div class="user-info" @click="toggleUserDropdown">
-            <img :src="authStore.currentUser?.avatar || '/src/assets/img/profil-default.png'" :alt="authStore.currentUser?.name" class="user-avatar">
+            <img :src="authStore.currentUser?.avatar || '/img/profil-default.png'" :alt="authStore.currentUser?.name" class="user-avatar">
             <span class="user-name">{{ authStore.currentUser?.name }}</span>
             <i class="fas fa-chevron-down dropdown-icon" :class="{ 'rotated': showUserDropdown }"></i>
           </div>

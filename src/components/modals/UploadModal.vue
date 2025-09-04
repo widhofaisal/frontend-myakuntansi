@@ -150,7 +150,18 @@ export default {
       isUploading.value = true
 
       try {
-        await filesStore.uploadFiles(selectedFiles.value)
+        // Create a FileList-like object from the selectedFiles array
+        const fileList = {
+          length: selectedFiles.value.length,
+          item: (index) => selectedFiles.value[index],
+          ...selectedFiles.value.reduce((acc, file, index) => ({
+            ...acc,
+            [index]: file
+          }), {})
+        }
+        
+        // Pass the fileList and overwrite option to the store
+        await filesStore.uploadFiles(fileList, uploadOptions.value.overwrite)
         emit('close')
       } catch (error) {
         console.error('Upload error:', error)

@@ -95,8 +95,8 @@
             </div>
             <div class="demo-card">
               <h4>Regular User</h4>
-              <p><strong>Username:</strong> user</p>
-              <p><strong>Password:</strong> password</p>
+              <p><strong>Username:</strong> widhofh</p>
+              <p><strong>Password:</strong> qwerty123</p>
               <button @click="fillCredentials('user')" class="btn btn-secondary btn-sm">
                 Use User Credentials
               </button>

@@ -108,6 +108,7 @@
               <h4 class="file-name" :title="item.name">{{ item.name }}</h4>
               <p class="file-meta">
                 <span v-if="!item.isFolder && item.size">{{ formatFileSize(item.size) }}</span>
+                <span v-if="!item.isFolder && item.size" class="meta-separator">•</span>
                 <span>{{ formatDate(item.modifiedAt || item.createdAt) }}</span>
               </p>
             </div>
@@ -146,7 +147,7 @@
               </div>
             </div>
             <div class="col-size">
-              {{ item.isFolder ? '-' : formatFileSize(item.size || 0) }}
+              {{ item.isLink ? '-' : item.isFolder ? '-' : formatFileSize(item.size || 0) }}
             </div>
             <div class="col-type">
               {{ item.isFolder ? 'Folder' : (item.extension || 'File') }}
@@ -713,9 +714,15 @@ export default {
 }
 
 .file-meta {
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
   color: var(--text-muted);
+  font-size: 0.75rem;
   margin: 0;
+  line-height: 1.2;
 }
 
 .file-actions {
@@ -820,6 +827,11 @@ export default {
 .drag-content i {
   font-size: 3rem;
   margin-bottom: 1rem;
+}
+
+.meta-separator {
+  opacity: 0.6;
+  margin: 0 0.25rem;
 }
 
 /* Responsive Design */

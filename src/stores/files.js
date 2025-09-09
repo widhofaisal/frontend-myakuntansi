@@ -123,18 +123,18 @@ export const useFilesStore = defineStore('files', {
         })
 
         this.folders.push(response.data.data)
-        
+
         // Show success toast
         toast.success(`Folder "${name}" created successfully`)
-        
+
         return { success: true, message: 'Folder created successfully' }
       } catch (error) {
         console.error('Create folder error:', error)
         const errorMessage = error.response?.data?.error || 'Failed to create folder'
-        
+
         // Show error toast
         toast.error(errorMessage)
-        
+
         return {
           success: false,
           message: errorMessage
@@ -173,29 +173,29 @@ export const useFilesStore = defineStore('files', {
         }
 
         // Handle both array and single file response
-        const newFiles = Array.isArray(response.data) 
-          ? response.data 
-          : response.data.data 
-            ? Array.isArray(response.data.data) 
-              ? response.data.data 
+        const newFiles = Array.isArray(response.data)
+          ? response.data
+          : response.data.data
+            ? Array.isArray(response.data.data)
+              ? response.data.data
               : [response.data.data]
             : [response.data]
 
         // Add new file(s) to the current list
         this.files = [...this.files, ...newFiles]
-        
+
         // Show success toast
         const fileCount = filesArray.length
         toast.success(`Successfully uploaded ${fileCount} ${fileCount === 1 ? 'file' : 'files'}`)
-        
+
         return { success: true, message: 'Files uploaded successfully' }
       } catch (error) {
         console.error('Upload error:', error)
         const errorMessage = error.response?.data?.error || 'Upload failed'
-        
+
         // Show error toast
         toast.error(errorMessage)
-        
+
         return {
           success: false,
           message: errorMessage
@@ -228,7 +228,7 @@ export const useFilesStore = defineStore('files', {
     async deleteItems(items) {
       const toast = useToast()
       this.isLoading = true
-      
+
       try {
         await Promise.all(
           items.map(item =>
@@ -240,19 +240,19 @@ export const useFilesStore = defineStore('files', {
         const itemIds = items.map(item => item.id)
         this.files = this.files.filter(file => !itemIds.includes(file.id))
         this.folders = this.folders.filter(folder => !itemIds.includes(folder.id))
-        
+
         // Show success toast
         const itemType = items.length > 1 ? 'items' : items[0].isFolder ? 'folder' : 'file'
         toast.success(`Successfully deleted ${items.length} ${itemType}${items.length > 1 ? 's' : ''}`)
-        
+
         return { success: true, message: 'Items deleted successfully' }
       } catch (error) {
         console.error('Delete error:', error)
         const errorMessage = error.response?.data?.error || 'Failed to delete items'
-        
+
         // Show error toast
         toast.error(errorMessage)
-        
+
         return {
           success: false,
           message: errorMessage
@@ -264,20 +264,12 @@ export const useFilesStore = defineStore('files', {
 
     async renameItem({ id, name, type }) {
       try {
-        const endpoint = type === 'folder' ? '/auth/folder' : '/auth/file';
-        const response = await api.put(`${endpoint}/${id}/rename`, { name });
+        const response = await api.put(`/auth/items/${id}`, { name });
 
         // Update the item in the state
-        if (type === 'folder') {
-          const index = this.folders.findIndex(f => f.id === id);
-          if (index !== -1) {
-            this.folders[index] = { ...this.folders[index], name };
-          }
-        } else {
-          const index = this.files.findIndex(f => f.id === id);
-          if (index !== -1) {
-            this.files[index] = { ...this.files[index], name };
-          }
+        const index = this.files.findIndex(f => f.id === id);
+        if (index !== -1) {
+          this.files[index] = { ...this.files[index], name };
         }
 
         return { success: true, message: 'Item renamed successfully' };

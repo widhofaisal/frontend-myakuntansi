@@ -5,8 +5,7 @@
         <!-- Logo and Brand -->
         <div class="brand">
           <router-link to="/dashboard" class="brand-link">
-            <i class="fas fa-archive"></i>
-            <span class="brand-text">FileArchive</span>
+            <img src="/img/logo.png" alt="Logo" class="logo-image" style="height: 70px; width: auto;">
           </router-link>
         </div>
 

@@ -8,33 +8,40 @@
         </button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body"
+        @dragenter="handleDragEnter"
+        @dragleave="handleDragLeave"
+        @dragover="handleDragOver"
+        @drop="handleDrop">
+        
         <!-- Upload Area -->
-        <div class="upload-area" :class="{ 'drag-over': isDragOver, 'has-files': selectedFiles.length > 0 }"
-          @drop="handleDrop" @dragover.prevent @dragleave.prevent="handleDragLeave"
-          @dragenter.prevent="handleDragEnter" @click="triggerFileInput">
-          <input ref="fileInput" type="file" multiple @change="handleFileSelect" class="file-input">
+        <div class="upload-area" 
+          :class="{ 'drag-over': isDragOver, 'has-files': selectedFiles.length > 0 }"
+          @click="triggerFileInput">
+          <div class="upload-area-content">
+            <input ref="fileInput" type="file" multiple @change="handleFileSelect" class="file-input">
 
-          <div v-if="selectedFiles.length === 0" class="upload-prompt">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <h4>Drop files here or click to browse</h4>
-            <p>Select multiple files to upload to your archive</p>
-          </div>
+            <div v-if="selectedFiles.length === 0" class="upload-prompt">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <h4>Drop files here or click to browse</h4>
+              <p>Select multiple files to upload to your archive</p>
+            </div>
 
-          <div v-else class="file-list">
-            <h4>Selected Files ({{ selectedFiles.length }})</h4>
-            <div class="file-items">
-              <div v-for="(file, index) in selectedFiles" :key="index" class="file-item">
-                <div class="file-info">
-                  <i :class="getFileIcon(file)"></i>
-                  <div class="file-details">
-                    <span class="file-name">{{ file.name }}</span>
-                    <span class="file-size">{{ formatFileSize(file.size) }}</span>
+            <div v-else class="file-list">
+              <h4>Selected Files ({{ selectedFiles.length }})</h4>
+              <div class="file-items">
+                <div v-for="(file, index) in selectedFiles" :key="index" class="file-item">
+                  <div class="file-info">
+                    <i :class="getFileIcon(file)"></i>
+                    <div class="file-details">
+                      <span class="file-name">{{ file.name }}</span>
+                      <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                    </div>
                   </div>
+                  <button @click.stop="removeFile(index)" class="remove-btn">
+                    <i class="fas fa-times"></i>
+                  </button>
                 </div>
-                <button @click="removeFile(index)" class="remove-btn">
-                  <i class="fas fa-times"></i>
-                </button>
               </div>
             </div>
           </div>
@@ -97,7 +104,6 @@ export default {
     const selectedFiles = ref([])
     const isDragOver = ref(false)
     const isUploading = ref(false)
-    let dragCounter = 0
 
     const uploadOptions = ref({
       overwrite: false
@@ -106,6 +112,41 @@ export default {
     const currentPath = computed(() => {
       return filesStore.currentPath || '/'
     })
+
+    const handleDragEnter = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (!isDragOver.value) {
+        isDragOver.value = true
+      }
+    }
+
+    const handleDragLeave = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      // Only hide if leaving the modal body
+      const relatedTarget = e.relatedTarget
+      if (!e.currentTarget.contains(relatedTarget) || relatedTarget === null) {
+        isDragOver.value = false
+      }
+    }
+
+    const handleDragOver = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      isDragOver.value = true
+    }
+
+    const handleDrop = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      isDragOver.value = false
+      
+      const files = Array.from(e.dataTransfer?.files || [])
+      if (files.length > 0) {
+        addFiles(files)
+      }
+    }
 
     const triggerFileInput = () => {
       if (!isUploading.value) {
@@ -116,18 +157,6 @@ export default {
     const handleFileSelect = (event) => {
       const files = Array.from(event.target.files)
       addFiles(files)
-    }
-
-    const handleDrop = (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      isDragOver.value = false
-
-      const files = Array.from(event.dataTransfer.files)
-      if (files.length > 0) {
-        addFiles(files)
-      }
-      dragCounter = 0
     }
 
     const addFiles = (files) => {
@@ -212,22 +241,6 @@ export default {
       return iconMap[extension] || 'fas fa-file text-gray-400'
     }
 
-    const handleDragEnter = (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      dragCounter++
-      isDragOver.value = true
-    }
-
-    const handleDragLeave = (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      dragCounter--
-      if (dragCounter === 0) {
-        isDragOver.value = false
-      }
-    }
-
     return {
       filesStore,
       fileInput,
@@ -245,7 +258,8 @@ export default {
       formatFileSize,
       getFileIcon,
       handleDragEnter,
-      handleDragLeave
+      handleDragLeave,
+      handleDragOver
     }
   }
 }
@@ -314,37 +328,38 @@ export default {
   flex: 1;
   padding: 1.5rem;
   overflow-y: auto;
+  position: relative;
 }
 
 .upload-area {
+  position: relative;
   border: 2px dashed var(--border-color);
   border-radius: var(--border-radius-lg);
   padding: 2rem;
   text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
+  transition: all 0.15s ease-out;
   min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: transparent;
+  pointer-events: none;
 }
 
-.upload-area:hover,
+.upload-area > * {
+  pointer-events: auto;
+}
+
 .upload-area.drag-over {
   border-color: var(--primary-color);
-  background-color: rgba(59, 130, 246, 0.05);
+  background-color: rgba(59, 130, 246, 0.08);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
-.upload-area.has-files {
-  cursor: default;
-  text-align: left;
-  align-items: flex-start;
-  justify-content: flex-start;
-}
-
-.file-input {
-  display: none;
+.upload-area-content {
+  width: 100%;
+  height: 100%;
+  transition: none;
 }
 
 .upload-prompt {

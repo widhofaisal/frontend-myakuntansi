@@ -5,8 +5,7 @@
         <!-- Header -->
         <div class="login-header">
           <div class="brand-logo">
-            <i class="fas fa-archive"></i>
-            <h1>FileArchive</h1>
+            <img src="/img/logo.png" alt="Logo" style="height: 200px; width: auto; margin-bottom: 0.25rem;">
           </div>
           <p class="login-subtitle">Sign in to manage your files</p>
         </div>
@@ -207,59 +206,77 @@ export default {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  background: linear-gradient(135deg, #ef4444 0%, #7f1d1d 100%);
+  padding: 2rem;
 }
 
 .login-container {
   width: 100%;
-  max-width: 480px;
+  max-width: 420px;
+  margin: 0 auto;
 }
 
 .login-card {
   background: var(--surface-color);
   border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .login-header {
+  padding: 0.25rem 2rem 0;
   text-align: center;
-  padding: 2.5rem 2rem 1.5rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: white;
+  position: relative;
+  z-index: 2;
+}
+
+.login-header::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: white;
+  transform: skewY(-2deg);
+  z-index: -1;
 }
 
 .brand-logo {
+  margin-bottom: 0;
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.brand-logo i {
-  font-size: 2.5rem;
-  color: var(--primary-color);
-}
-
-.brand-logo h1 {
-  color: var(--text-primary);
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
+  background: white;
+  padding: 0;
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
 
 .login-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  margin: 0;
-  font-size: 1rem;
+  line-height: 1.2;
 }
 
 .login-form {
-  padding: 2rem;
+  padding: 0.75rem 2rem 1.25rem;
+  background: white;
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+.form-group {
+  margin-bottom: 0.75rem;
+}
+
+.form-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
 }
 
 .input-wrapper {
@@ -350,11 +367,13 @@ export default {
 .demo-divider::before {
   content: '';
   position: absolute;
-  top: 50%;
+  bottom: -20px;
   left: 0;
   right: 0;
-  height: 1px;
-  background-color: var(--border-color);
+  height: 40px;
+  background: white;
+  transform: skewY(-2deg);
+  z-index: -1;
 }
 
 .demo-divider span {
@@ -438,12 +457,10 @@ export default {
     padding: 1.5rem;
   }
   
-  .brand-logo h1 {
-    font-size: 1.75rem;
-  }
-  
-  .brand-logo i {
-    font-size: 2rem;
+  .brand-logo img {
+    height: 40px;
+    width: auto;
+    margin-bottom: 1rem;
   }
 }
 </style>

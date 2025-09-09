@@ -46,7 +46,7 @@
             <i class="fas fa-hdd"></i>
           </div>
           <div class="stat-content">
-            <h3>{{ storageInGB }} GB</h3>
+            <h3>{{ storageInGB }}</h3>
             <p>Storage Used</p>
           </div>
         </div>
@@ -104,7 +104,7 @@
           </div>
         </div>
 
-        <div class="chart-container">
+        <!-- <div class="chart-container">
           <div class="card">
             <div class="card-header">
               <h3>Upload Activity</h3>
@@ -118,11 +118,11 @@
               <UploadActivityChart :period="activityPeriod" />
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <!-- Recent Activity -->
-      <div class="recent-activity">
+      <!-- <div class="recent-activity">
         <div class="card">
           <div class="card-header">
             <h3>Recent Activity</h3>
@@ -163,10 +163,10 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- Quick Actions -->
-      <div class="quick-actions">
+      <!-- <div class="quick-actions">
         <div class="card">
           <div class="card-header">
             <h3>Quick Actions</h3>
@@ -215,7 +215,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -286,7 +286,14 @@ export default {
     })
     
     const storageInGB = computed(() => {
-      return (filesStore.stats.totalStorageUsed / (1024 * 1024 * 1024)).toFixed(2)
+      const bytes = parseFloat(filesStore.stats.totalStorageUsed);
+      if (bytes < 1024 * 1024) {
+        return (bytes / 1024).toFixed(2) + ' KB';
+      } else if (bytes < 1024 * 1024 * 1024) {
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+      } else {
+        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+      }
     })
 
     const refreshData = async () => {

@@ -149,6 +149,7 @@ export default {
         const updateData = {
           fullname: formData.value.fullname,
           username: formData.value.username,
+          password: formData.value.password,
           role: formData.value.role
         }
 

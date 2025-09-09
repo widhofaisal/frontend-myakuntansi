@@ -184,6 +184,16 @@ export default {
         return false
       }
 
+      // Check if a file or folder with the same name already exists in the current directory
+      const existingItem = [...filesStore.files, ...filesStore.folders].find(
+        item => item.name.toLowerCase() === name.toLowerCase()
+      )
+      
+      if (existingItem) {
+        errors.value.name = `A ${existingItem.isFolder ? 'folder' : 'file'} with this name already exists`
+        return false
+      }
+
       return true
     }
 
@@ -237,24 +247,45 @@ export default {
     }
 
     const handleSubmit = async () => {
-      if (!validateUrl() || !validateName()) return
-
+      // Reset errors
+      errors.value.general = ''
+      
+      // Validate form
+      const isUrlValid = validateUrl()
+      const isNameValid = validateName()
+      
+      if (!isUrlValid || !isNameValid) {
+        return
+      }
+      
       isUploading.value = true
-
+      
       try {
         const result = await filesStore.uploadLink(
           linkData.value.url.trim(),
-          linkData.value.name.trim()
+          linkData.value.name.trim(),
+          linkData.value.description?.trim()
         )
         
         if (result.success) {
           emit('close')
         } else {
-          errors.value.general = result.message || 'Failed to add link'
+          // If the error is about duplicate filename, show it in the name field
+          if (result.error?.includes('already exists')) {
+            errors.value.name = result.error
+          } else {
+            errors.value.general = result.error || 'Failed to add link. Please try again.'
+          }
         }
       } catch (error) {
-        console.error('Upload link error:', error)
-        errors.value.general = 'Failed to add link. Please try again.'
+        console.error('Error uploading link:', error)
+        const errorMessage = error.response?.data?.error || 'Failed to add link. Please try again.'
+        
+        if (errorMessage.includes('already exists')) {
+          errors.value.name = errorMessage
+        } else {
+          errors.value.general = errorMessage
+        }
       } finally {
         isUploading.value = false
       }

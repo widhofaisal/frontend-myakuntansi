@@ -186,8 +186,8 @@ export default {
         form.username = 'adamh'
         form.password = 'qwerty123'
       } else {
-        form.username = 'user'
-        form.password = 'password'
+        form.username = 'widhofh'
+        form.password = 'qwerty123'
       }
     }
     

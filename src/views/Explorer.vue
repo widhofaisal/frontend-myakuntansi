@@ -38,6 +38,24 @@
         </div>
       </div>
 
+      <!-- Bulk Actions Toolbar -->
+      <div v-if="filesStore.selectedItems.length > 0" class="bulk-actions-bar">
+        <div class="selected-count">
+          <i class="fas fa-check-circle"></i>
+          {{ filesStore.selectedItems.length }} item{{ filesStore.selectedItems.length > 1 ? 's' : '' }} selected
+        </div>
+        <div class="bulk-actions">
+          <button @click="deleteBulkItems" class="btn btn-danger">
+            <i class="fas fa-trash"></i>
+            Delete Selected
+          </button>
+          <button @click="filesStore.clearSelection()" class="btn btn-secondary">
+            <i class="fas fa-times"></i>
+            Clear Selection
+          </button>
+        </div>
+      </div>
+
       <!-- Search and View Controls -->
       <div class="controls-bar">
         <div class="search-section">
@@ -82,22 +100,41 @@
 
       <!-- File Grid/List -->
       <div class="file-area" :class="{ 'drag-over': isDragOver }" @drop="handleDrop"
-        @dragover.prevent="isDragOver = true" @dragleave="isDragOver = false" @dragenter.prevent>
-        <!-- Empty State -->
-        <div v-if="filesStore.filteredItems.length === 0 && !filesStore.isLoading" class="empty-state">
-          <i class="fas fa-folder-open"></i>
-          <h3>This folder is empty</h3>
-          <p>Upload files or create folders to get started</p>
-          <button @click="showUploadModal = true" class="btn btn-primary">
-            <i class="fas fa-upload"></i>
-            Upload Files
-          </button>
+        @dragover.prevent="handleDragOver" @dragleave="handleDragLeave" @dragenter.prevent>
+        <!-- Empty State with Drag and Drop -->
+        <div v-if="filesStore.filteredItems.length === 0 && !filesStore.isLoading" 
+             class="empty-state"
+             :class="{ 'drag-over': isDragOver }">
+          <div class="drop-zone" v-show="isDragOver">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <h3>Drop files to upload</h3>
+            <p>Drag and drop files here to upload</p>
+          </div>
+          <div v-show="!isDragOver" class="empty-content">
+            <i class="fas fa-folder-open"></i>
+            <h3>This folder is empty</h3>
+            <p>Upload files or create folders to get started</p>
+            <button @click="showUploadModal = true" class="btn btn-primary">
+              <i class="fas fa-upload"></i>
+              Upload Files
+            </button>
+          </div>
         </div>
 
         <!-- Grid View -->
         <div v-else-if="filesStore.viewMode === 'grid'" class="file-grid">
-          <div v-for="item in filesStore.filteredItems" :key="item.id" class="file-item"
+          <div v-for="item in filesStore.filteredItems" :key="item.id" 
+            class="file-item"
+            :class="{ 'selected': isSelected(item) }"
             @dblclick="openItem(item, $event)">
+            <div class="selection-checkbox">
+              <input 
+                type="checkbox" 
+                :checked="isSelected(item)"
+                @click.stop="toggleSelection(item)"
+                class="item-checkbox"
+              />
+            </div>
             <div class="file-icon">
               <i :class="getFileIcon(item)"></i>
               <div v-if="item.isLink" class="link-indicator">
@@ -130,6 +167,15 @@
         <!-- List View -->
         <div v-else class="file-list">
           <div class="list-header">
+            <div class="col-select">
+              <input 
+                type="checkbox" 
+                :checked="allSelected"
+                @change="toggleSelectAll"
+                class="item-checkbox"
+                title="Select All"
+              />
+            </div>
             <div class="col-name">Name</div>
             <div class="col-size">Size</div>
             <div class="col-type">Type</div>
@@ -137,8 +183,18 @@
             <div class="col-owner">Owner</div>
             <div class="col-actions">Actions</div>
           </div>
-          <div v-for="item in filesStore.filteredItems" :key="item.id" class="list-item"
+          <div v-for="item in filesStore.filteredItems" :key="item.id" 
+            class="list-item"
+            :class="{ 'selected': isSelected(item) }"
             @dblclick="openItem(item, $event)">
+            <div class="col-select">
+              <input 
+                type="checkbox" 
+                :checked="isSelected(item)"
+                @click.stop="toggleSelection(item)"
+                class="item-checkbox"
+              />
+            </div>
             <div class="col-name">
               <div class="name-content">
                 <i :class="getFileIcon(item)"></i>
@@ -173,8 +229,8 @@
           </div>
         </div>
 
-        <!-- Drag Overlay -->
-        <div v-if="isDragOver" class="drag-overlay">
+        <!-- Drag Overlay - Only show when dragging over content area -->
+        <div v-if="isDragOver && filesStore.filteredItems.length > 0" class="drag-overlay">
           <div class="drag-content">
             <i class="fas fa-cloud-upload-alt"></i>
             <h3>Drop files here to upload</h3>
@@ -269,13 +325,44 @@ export default {
       }
     }
 
+    const dragTimeout = ref(null)
+
+    const handleDragOver = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      
+      // Clear existing timeout
+      if (dragTimeout.value) {
+        clearTimeout(dragTimeout.value)
+      }
+      
+      // Set drag over state
+      isDragOver.value = true
+    }
+
+    const handleDragLeave = (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      
+      // Use timeout to prevent flickering when moving between child elements
+      dragTimeout.value = setTimeout(() => {
+        isDragOver.value = false
+      }, 100)
+    }
+
     const handleDrop = async (event) => {
       event.preventDefault()
-      event.stopPropagation()  // Prevent event from bubbling up
+      event.stopPropagation()
+      
+      // Clear timeout and reset state
+      if (dragTimeout.value) {
+        clearTimeout(dragTimeout.value)
+        dragTimeout.value = null
+      }
       isDragOver.value = false
 
-      // Only process if we have files and no modal is open
-      if (event.dataTransfer.files.length > 0 && !showUploadModal.value) {
+      // Process files if available
+      if (event.dataTransfer.files.length > 0) {
         const files = Array.from(event.dataTransfer.files)
         await filesStore.uploadFiles(files)
       }
@@ -358,6 +445,54 @@ export default {
       }
     };
 
+    const toggleSelection = (item) => {
+      filesStore.toggleItemSelection(item)
+    }
+
+    const isSelected = (item) => {
+      return filesStore.selectedItems.some(i => i.id === item.id)
+    }
+
+    const allSelected = computed(() => {
+      return filesStore.filteredItems.length > 0 && 
+             filesStore.filteredItems.every(item => isSelected(item))
+    })
+
+    const toggleSelectAll = () => {
+      if (allSelected.value) {
+        filesStore.clearSelection()
+      } else {
+        filesStore.setSelectedItems([...filesStore.filteredItems])
+      }
+    }
+
+    const deleteBulkItems = async () => {
+      const count = filesStore.selectedItems.length
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: `You are about to delete ${count} item${count > 1 ? 's' : ''}. This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete them!',
+        cancelButtonText: 'Cancel'
+      })
+
+      if (result.isConfirmed) {
+        try {
+          await filesStore.deleteItems([...filesStore.selectedItems])
+        } catch (error) {
+          console.error('Error deleting items:', error)
+          await Swal.fire(
+            'Error!',
+            'There was an error deleting some items.',
+            'error'
+          )
+        }
+      }
+    }
+
     const showItemDetails = (item) => {
       selectedItemForDetails.value = item
       showDetailsModal.value = true
@@ -416,7 +551,6 @@ export default {
 
       return iconMap[item.extension] || 'fas fa-file text-gray-400'
     }
-
     onMounted(() => {
       filesStore.fetchFiles(0)
     })
@@ -436,9 +570,16 @@ export default {
       handleSortChange,
       toggleSortOrder,
       openItem,
+      handleDragOver,
+      handleDragLeave,
       handleDrop,
       downloadItem,
       deleteItem,
+      toggleSelection,
+      isSelected,
+      allSelected,
+      toggleSelectAll,
+      deleteBulkItems,
       editItem,
       handleItemUpdated,
       showItemDetails,
@@ -674,6 +815,25 @@ export default {
   box-shadow: var(--shadow-sm);
 }
 
+.file-item.selected {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--primary-color);
+}
+
+.selection-checkbox {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 2;
+}
+
+.item-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
 .file-icon {
   position: relative;
   text-align: center;
@@ -733,6 +893,46 @@ export default {
   transition: opacity 0.2s ease;
 }
 
+/* Empty State with Drag and Drop */
+.empty-state {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.empty-state.drag-over {
+  background-color: rgba(66, 153, 225, 0.1);
+  border-color: #4299e1;
+}
+
+.empty-state .drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.empty-state .drop-zone i {
+  font-size: 3rem;
+  color: #4299e1;
+  margin-bottom: 1rem;
+}
+
+.empty-state .empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .file-item:hover .file-actions {
   opacity: 1;
 }
@@ -765,7 +965,7 @@ export default {
 
 .list-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr 100px;
+  grid-template-columns: 40px 2fr 1fr 1fr 1.5fr 1fr 100px;
   gap: 1rem;
   padding: 1rem;
   background: var(--background-color);
@@ -776,7 +976,7 @@ export default {
 
 .list-item {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr 100px;
+  grid-template-columns: 40px 2fr 1fr 1fr 1.5fr 1fr 100px;
   gap: 1rem;
   padding: 1rem;
   border-bottom: 1px solid var(--border-color);
@@ -786,6 +986,16 @@ export default {
 
 .list-item:hover {
   background-color: var(--background-color);
+}
+
+.list-item.selected {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.col-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .list-item:last-child {
@@ -834,6 +1044,30 @@ export default {
   margin: 0 0.25rem;
 }
 
+.bulk-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--border-radius);
+  margin-bottom: 1rem;
+}
+
+.selected-count {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .explorer {
@@ -870,7 +1104,7 @@ export default {
 
   .list-header,
   .list-item {
-    grid-template-columns: 2fr 1fr 80px;
+    grid-template-columns: 40px 2fr 1fr 80px;
     gap: 0.5rem;
   }
 

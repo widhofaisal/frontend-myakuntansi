@@ -78,31 +78,6 @@
             {{ errors.general }}
           </div>
         </form>
-
-        <!-- Demo Credentials -->
-        <div class="demo-section">
-          <div class="demo-divider">
-            <span>Demo Credentials</span>
-          </div>
-          <div class="demo-credentials">
-            <div class="demo-card">
-              <h4>Admin Account</h4>
-              <p><strong>Username:</strong> adamh</p>
-              <p><strong>Password:</strong> qwerty123</p>
-              <button @click="fillCredentials('admin')" class="btn btn-secondary btn-sm">
-                Use Admin Credentials
-              </button>
-            </div>
-            <div class="demo-card">
-              <h4>Regular User</h4>
-              <p><strong>Username:</strong> widhofh</p>
-              <p><strong>Password:</strong> qwerty123</p>
-              <button @click="fillCredentials('user')" class="btn btn-secondary btn-sm">
-                Use User Credentials
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -184,10 +159,10 @@ export default {
     const fillCredentials = (type) => {
       if (type === 'admin') {
         form.username = 'adamh'
-        form.password = 'qwerty123'
+        form.password = '199304152015071002'
       } else {
         form.username = 'widhofh'
-        form.password = 'qwerty123'
+        form.password = '200208142025061001'
       }
     }
     

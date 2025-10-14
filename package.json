@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Modern Vue.js file archiving system frontend",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host --open=false",
     "build": "vite build",
     "preview": "vite preview"
   },

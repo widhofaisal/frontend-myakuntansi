@@ -172,21 +172,12 @@ export const useFilesStore = defineStore('files', {
           throw new Error('No data received from server')
         }
 
-        // Handle both array and single file response
-        const newFiles = Array.isArray(response.data)
-          ? response.data
-          : response.data.data
-            ? Array.isArray(response.data.data)
-              ? response.data.data
-              : [response.data.data]
-            : [response.data]
-
-        // Add new file(s) to the current list
-        this.files = [...this.files, ...newFiles]
-
-        // Show success toast
+        // Show success toast before refreshing
         const fileCount = filesArray.length
         toast.success(`Successfully uploaded ${fileCount} ${fileCount === 1 ? 'file' : 'files'}`)
+
+        // Refresh the file list to ensure proper data structure and reactivity
+        await this.fetchFiles(this.currentFolderId)
 
         return { success: true, message: 'Files uploaded successfully' }
       } catch (error) {
@@ -229,34 +220,45 @@ export const useFilesStore = defineStore('files', {
       const toast = useToast()
       this.isLoading = true
 
+      const itemsArray = Array.isArray(items) ? items : [items]
+      const deletedIds = []
+      let failedCount = 0
+      let lastErrorMessage = ''
+
       try {
-        await Promise.all(
-          items.map(item =>
-            api.delete(`/auth/items/${item.id}`)
-          )
-        )
+        for (const item of itemsArray) {
+          try {
+            await api.delete(`/auth/items/${item.id}`)
+            deletedIds.push(item.id)
+          } catch (error) {
+            failedCount += 1
+            lastErrorMessage = error?.response?.data?.error || error?.message || 'Failed to delete item'
+            console.error('Delete error:', error)
+          }
+        }
 
-        // Remove deleted items from the state
-        const itemIds = items.map(item => item.id)
-        this.files = this.files.filter(file => !itemIds.includes(file.id))
-        this.folders = this.folders.filter(folder => !itemIds.includes(folder.id))
+        if (deletedIds.length) {
+          this.files = this.files.filter(file => !deletedIds.includes(file.id))
+          this.folders = this.folders.filter(folder => !deletedIds.includes(folder.id))
+          this.selectedItems = this.selectedItems.filter(selected => !deletedIds.includes(selected.id))
 
-        // Show success toast
-        const itemType = items.length > 1 ? 'items' : items[0].isFolder ? 'folder' : 'file'
-        toast.success(`Successfully deleted ${items.length} ${itemType}${items.length > 1 ? 's' : ''}`)
+          const deletedItems = itemsArray.filter(item => deletedIds.includes(item.id))
+          const successCount = deletedItems.length
+          if (successCount) {
+            const label = successCount === 1
+              ? (deletedItems[0].isFolder ? 'folder' : 'item')
+              : 'items'
+            toast.success(`Successfully deleted ${successCount} ${label}`)
+          }
+        }
+
+        if (failedCount) {
+          const message = failedCount === 1 ? lastErrorMessage : `Failed to delete ${failedCount} items`
+          toast.error(message)
+          return { success: false, message }
+        }
 
         return { success: true, message: 'Items deleted successfully' }
-      } catch (error) {
-        console.error('Delete error:', error)
-        const errorMessage = error.response?.data?.error || 'Failed to delete items'
-
-        // Show error toast
-        toast.error(errorMessage)
-
-        return {
-          success: false,
-          message: errorMessage
-        }
       } finally {
         this.isLoading = false
       }
@@ -306,6 +308,25 @@ export const useFilesStore = defineStore('files', {
       } else {
         this.selectedItems.push(item)
       }
+    },
+
+    setSelectedItems(items = []) {
+      if (!Array.isArray(items)) {
+        this.selectedItems = []
+        return
+      }
+
+      const uniqueItems = []
+      const seenIds = new Set()
+
+      items.forEach(item => {
+        if (item && !seenIds.has(item.id)) {
+          seenIds.add(item.id)
+          uniqueItems.push(item)
+        }
+      })
+
+      this.selectedItems = uniqueItems
     },
 
     clearSelection() {

@@ -64,7 +64,6 @@
             <label class="checkbox-label">
               <input v-model="uploadOptions.overwrite" type="checkbox" class="checkbox-input">
               <span class="checkbox-custom"></span>
-              Overwrite existing files
             </label>
           </div>
 
@@ -77,7 +76,6 @@
           </div>
         </div>
       </div>
-
       <div class="modal-footer">
         <button @click="$emit('close')" class="btn btn-secondary" :disabled="isUploading">
           Cancel
@@ -104,6 +102,7 @@ export default {
     const selectedFiles = ref([])
     const isDragOver = ref(false)
     const isUploading = ref(false)
+    const dragTimeout = ref(null)
 
     const uploadOptions = ref({
       overwrite: false
@@ -116,19 +115,23 @@ export default {
     const handleDragEnter = (e) => {
       e.preventDefault()
       e.stopPropagation()
-      if (!isDragOver.value) {
-        isDragOver.value = true
+
+      // Clear existing timeout
+      if (dragTimeout.value) {
+        clearTimeout(dragTimeout.value)
       }
+
+      isDragOver.value = true
     }
 
     const handleDragLeave = (e) => {
       e.preventDefault()
       e.stopPropagation()
-      // Only hide if leaving the modal body
-      const relatedTarget = e.relatedTarget
-      if (!e.currentTarget.contains(relatedTarget) || relatedTarget === null) {
+
+      // Use timeout to prevent flickering when moving between child elements
+      dragTimeout.value = setTimeout(() => {
         isDragOver.value = false
-      }
+      }, 100)
     }
 
     const handleDragOver = (e) => {
@@ -140,8 +143,14 @@ export default {
     const handleDrop = (e) => {
       e.preventDefault()
       e.stopPropagation()
+
+      // Clear timeout and reset state
+      if (dragTimeout.value) {
+        clearTimeout(dragTimeout.value)
+        dragTimeout.value = null
+      }
       isDragOver.value = false
-      
+
       const files = Array.from(e.dataTransfer?.files || [])
       if (files.length > 0) {
         addFiles(files)
@@ -259,7 +268,8 @@ export default {
       getFileIcon,
       handleDragEnter,
       handleDragLeave,
-      handleDragOver
+      handleDragOver,
+      dragTimeout
     }
   }
 }
@@ -565,13 +575,14 @@ export default {
   .upload-prompt i {
     font-size: 2rem;
   }
+}
 
-  .modal-footer {
-    flex-direction: column;
-  }
-
-  .modal-footer .btn {
-    width: 100%;
-  }
+/* Hide file input default button */
+.file-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
 </style>

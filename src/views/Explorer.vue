@@ -247,6 +247,7 @@
       v-if="showDetailsModal" 
       :item="selectedItemForDetails" 
       @close="showDetailsModal = false"
+      @download="downloadItem"
       @edit="editItem"
     />
     <EditItemModal
@@ -261,6 +262,7 @@
 <script>
 import { ref, onMounted, computed } from 'vue'
 import { useFilesStore } from '../stores/files'
+import { useAuthStore } from '../stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import UploadModal from '../components/modals/UploadModal.vue'
 import CreateFolderModal from '../components/modals/CreateFolderModal.vue'
@@ -280,6 +282,7 @@ export default {
   },
   setup() {
     const filesStore = useFilesStore()
+    const authStore = useAuthStore()
 
     const breadcrumbs = computed(() => {
       const arr = filesStore.breadcrumbs || []
@@ -374,8 +377,73 @@ export default {
         return
       }
 
+      // Get file extension and icon
+      const getFileIcon = (filename) => {
+        const ext = filename.split('.').pop().toLowerCase()
+        const iconMap = {
+          pdf: 'fa-file-pdf',
+          doc: 'fa-file-word',
+          docx: 'fa-file-word',
+          xls: 'fa-file-excel',
+          xlsx: 'fa-file-excel',
+          ppt: 'fa-file-powerpoint',
+          pptx: 'fa-file-powerpoint',
+          zip: 'fa-file-archive',
+          rar: 'fa-file-archive',
+          jpg: 'fa-file-image',
+          jpeg: 'fa-file-image',
+          png: 'fa-file-image',
+          gif: 'fa-file-image',
+          mp4: 'fa-file-video',
+          mp3: 'fa-file-audio',
+          txt: 'fa-file-alt',
+          csv: 'fa-file-csv'
+        }
+        return iconMap[ext] || 'fa-file'
+      }
+
+      const fileIcon = getFileIcon(item.name)
+      const fileSize = item.size ? `(${(item.size / 1024 / 1024).toFixed(2)} MB)` : ''
+
       try {
-        const token = localStorage.getItem('token')
+        const token = authStore.token
+        if (!token) {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Authentication Required',
+            text: 'Please log in to download files.',
+            confirmButtonColor: '#ef4444'
+          })
+          return
+        }
+
+        // Show loading popup
+        Swal.fire({
+          title: 'Preparing Download',
+          html: `
+            <div style="text-align: center; padding: 1rem 0;">
+              <div style="margin-bottom: 1rem;">
+                <i class="fas ${fileIcon}" style="font-size: 3rem; color: #3b82f6;"></i>
+              </div>
+              <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">
+                ${item.name}
+              </div>
+              <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 1.5rem;">
+                ${fileSize}
+              </div>
+              <div style="color: #64748b; font-size: 0.9rem;">
+                <i class="fas fa-spinner fa-spin"></i> Downloading file...
+              </div>
+            </div>
+          `,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading()
+          }
+        })
+
         const downloadUrl = `${import.meta.env.VITE_API_BASE_URL}/auth/items/download/${item.id}`
 
         // Use fetch to get the file with authorization header
@@ -385,7 +453,9 @@ export default {
           }
         })
 
-        if (!response.ok) throw new Error('Failed to download file')
+        if (!response.ok) {
+          throw new Error(response.status === 404 ? 'File not found' : 'Failed to download file')
+        }
 
         // Get the blob data
         const blob = await response.blob()
@@ -404,12 +474,56 @@ export default {
         window.URL.revokeObjectURL(url)
         document.body.removeChild(link)
 
+        // Show success message
+        await Swal.fire({
+          icon: 'success',
+          title: 'Download Started!',
+          html: `
+            <div style="text-align: center; padding: 0.5rem 0;">
+              <div style="margin-bottom: 1rem;">
+                <i class="fas ${fileIcon}" style="font-size: 2.5rem; color: #10b981;"></i>
+              </div>
+              <div style="font-weight: 500; color: #1e293b; margin-bottom: 0.5rem;">
+                ${item.name}
+              </div>
+              <div style="font-size: 0.875rem; color: #64748b;">
+                Check your downloads folder
+              </div>
+            </div>
+          `,
+          confirmButtonColor: '#10b981',
+          timer: 2500,
+          timerProgressBar: true,
+          showClass: {
+            popup: 'swal2-show',
+            backdrop: 'swal2-backdrop-show',
+            icon: 'swal2-icon-show'
+          }
+        })
+
       } catch (error) {
         console.error('Download failed:', error)
         await Swal.fire({
           icon: 'error',
-          title: 'Download failed',
-          text: 'Please try again.'
+          title: 'Download Failed',
+          html: `
+            <div style="text-align: center; padding: 0.5rem 0;">
+              <div style="margin-bottom: 1rem;">
+                <i class="fas ${fileIcon}" style="font-size: 2.5rem; color: #ef4444;"></i>
+              </div>
+              <div style="font-weight: 500; color: #1e293b; margin-bottom: 0.5rem;">
+                ${item.name}
+              </div>
+              <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 1rem;">
+                ${error.message || 'An error occurred while downloading the file'}
+              </div>
+              <div style="background: #fee2e2; padding: 0.75rem; border-radius: 8px; font-size: 0.875rem; color: #7f1d1d;">
+                <i class="fas fa-info-circle"></i> Please try again or contact support if the problem persists.
+              </div>
+            </div>
+          `,
+          confirmButtonColor: '#ef4444',
+          confirmButtonText: 'OK'
         })
       }
     }

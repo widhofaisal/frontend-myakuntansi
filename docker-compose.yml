@@ -1,19 +1,22 @@
-version: '3.8'
-
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: myakuntansi_frontend
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8080:8080"
     volumes:
       - ./:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
     networks:
       - app-network
+    stdin_open: true
+    tty: true
 
   # Uncomment and configure if you need a backend service
   # backend:

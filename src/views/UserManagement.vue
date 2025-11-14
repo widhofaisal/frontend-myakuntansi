@@ -144,6 +144,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import api from '../utils/axios'
 import EditUserModal from '../components/modals/EditUserModal.vue'
+import Swal from 'sweetalert2'
 
 export default {
   components: {
@@ -230,31 +231,153 @@ export default {
     }
 
     const promoteUser = async (user) => {
-      if (confirm(`Promote ${user.name} to admin?`)) {
-        user.role = 'admin'
+      const result = await Swal.fire({
+        title: '🚀 Promote to Admin',
+        html: `
+          <div style="text-align: left; padding: 1rem 0;">
+            <p style="margin-bottom: 1rem; color: #64748b;">You are about to promote:</p>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                  <i class="fas fa-user" style="font-size: 1.2rem;"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">${user.fullname || user.username}</div>
+                  <div style="font-size: 0.875rem; color: #64748b;">@${user.username}</div>
+                </div>
+              </div>
+            </div>
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: start;">
+                <i class="fas fa-crown" style="color: #f59e0b; margin-top: 0.2rem;"></i>
+                <div style="font-size: 0.875rem; color: #92400e;">
+                  <strong>Admin privileges include:</strong><br/>
+                  • Full system access<br/>
+                  • User management<br/>
+                  • File management for all users
+                </div>
+              </div>
+            </div>
+            <p style="color: #64748b; font-size: 0.875rem; margin: 0;">This action will grant administrative privileges to this user.</p>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-check"></i> Yes, Promote',
+        cancelButtonText: '<i class="fas fa-times"></i> Cancel',
+        customClass: {
+          popup: 'swal2-popup-custom',
+          confirmButton: 'swal2-confirm-custom',
+          cancelButton: 'swal2-cancel-custom'
+        },
+        buttonsStyling: true,
+        reverseButtons: true,
+        focusCancel: true
+      })
+
+      if (result.isConfirmed) {
         try {
           const response = await api.put(`/auth/users/${user.id}`, {
-            role: user.role
+            role: 'admin'
           })
-          console.log('User promoted:', response.data.data)
+          
+          // Update local state
+          user.role = 'admin'
+          
+          await Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            html: `<strong>${user.fullname || user.username}</strong> has been promoted to admin.`,
+            confirmButtonColor: '#10b981',
+            timer: 2500,
+            timerProgressBar: true
+          })
         } catch (error) {
           console.error('Promote user error:', error)
-          alert('Failed to promote user: ' + (error.response?.data?.message || error.message))
+          await Swal.fire({
+            icon: 'error',
+            title: 'Promotion Failed',
+            text: error.response?.data?.message || error.message || 'Failed to promote user',
+            confirmButtonColor: '#ef4444'
+          })
         }
       }
     }
 
     const demoteUser = async (user) => {
-      if (confirm(`Demote ${user.name} to regular user?`)) {
-        user.role = 'user'
+      const result = await Swal.fire({
+        title: '⬇️ Demote to Regular User',
+        html: `
+          <div style="text-align: left; padding: 1rem 0;">
+            <p style="margin-bottom: 1rem; color: #64748b;">You are about to demote:</p>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                  <i class="fas fa-crown" style="font-size: 1.2rem;"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">${user.fullname || user.username}</div>
+                  <div style="font-size: 0.875rem; color: #64748b;">@${user.username}</div>
+                </div>
+              </div>
+            </div>
+            <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: start;">
+                <i class="fas fa-exclamation-triangle" style="color: #dc2626; margin-top: 0.2rem;"></i>
+                <div style="font-size: 0.875rem; color: #7f1d1d;">
+                  <strong>This will revoke:</strong><br/>
+                  • Administrative privileges<br/>
+                  • User management access<br/>
+                  • System-wide file access
+                </div>
+              </div>
+            </div>
+            <p style="color: #64748b; font-size: 0.875rem; margin: 0;">The user will be downgraded to a regular user account.</p>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-check"></i> Yes, Demote',
+        cancelButtonText: '<i class="fas fa-times"></i> Cancel',
+        customClass: {
+          popup: 'swal2-popup-custom',
+          confirmButton: 'swal2-confirm-custom',
+          cancelButton: 'swal2-cancel-custom'
+        },
+        buttonsStyling: true,
+        reverseButtons: true,
+        focusCancel: true
+      })
+
+      if (result.isConfirmed) {
         try {
           const response = await api.put(`/auth/users/${user.id}`, {
-            role: user.role
+            role: 'user'
           })
-          console.log('User demoted:', response.data.data)
+          
+          // Update local state
+          user.role = 'user'
+          
+          await Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            html: `<strong>${user.fullname || user.username}</strong> has been demoted to regular user.`,
+            confirmButtonColor: '#10b981',
+            timer: 2500,
+            timerProgressBar: true
+          })
         } catch (error) {
           console.error('Demote user error:', error)
-          alert('Failed to demote user: ' + (error.response?.data?.message || error.message))
+          await Swal.fire({
+            icon: 'error',
+            title: 'Demotion Failed',
+            text: error.response?.data?.message || error.message || 'Failed to demote user',
+            confirmButtonColor: '#ef4444'
+          })
         }
       }
     }
@@ -284,17 +407,76 @@ export default {
     }
 
     const deleteUser = async (user) => {
-      if (confirm(`Delete user ${user.name}? This action cannot be undone.`)) {
-        const index = users.value.findIndex(u => u.id === user.id)
-        if (index > -1) {
-          users.value.splice(index, 1)
-        }
+      const result = await Swal.fire({
+        title: '🗑️ Delete User',
+        html: `
+          <div style="text-align: left; padding: 1rem 0;">
+            <p style="margin-bottom: 1rem; color: #64748b;">You are about to permanently delete:</p>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                  <i class="fas fa-user" style="font-size: 1.2rem;"></i>
+                </div>
+                <div>
+                  <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.25rem;">${user.fullname || user.username}</div>
+                  <div style="font-size: 0.875rem; color: #64748b;">@${user.username}</div>
+                </div>
+              </div>
+            </div>
+            <div style="background: #fee2e2; border-left: 4px solid #dc2626; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: start;">
+                <i class="fas fa-exclamation-circle" style="color: #dc2626; margin-top: 0.2rem;"></i>
+                <div style="font-size: 0.875rem; color: #7f1d1d;">
+                  <strong>Warning:</strong> This action cannot be undone.<br/>
+                  All user data and files will be permanently deleted.
+                </div>
+              </div>
+            </div>
+            <p style="color: #64748b; font-size: 0.875rem; margin: 0;">Are you absolutely sure you want to proceed?</p>
+          </div>
+        `,
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-trash"></i> Yes, Delete',
+        cancelButtonText: '<i class="fas fa-times"></i> Cancel',
+        customClass: {
+          popup: 'swal2-popup-custom',
+          confirmButton: 'swal2-confirm-custom',
+          cancelButton: 'swal2-cancel-custom'
+        },
+        buttonsStyling: true,
+        reverseButtons: true,
+        focusCancel: true
+      })
+
+      if (result.isConfirmed) {
         try {
-          const response = await api.delete(`/auth/users/${user.id}`)
-          console.log('User deleted:', response.data.data)
+          await api.delete(`/auth/users/${user.id}`)
+          
+          // Remove from local state
+          const index = users.value.findIndex(u => u.id === user.id)
+          if (index > -1) {
+            users.value.splice(index, 1)
+          }
+          
+          await Swal.fire({
+            icon: 'success',
+            title: 'Deleted!',
+            html: `User <strong>${user.fullname || user.username}</strong> has been deleted.`,
+            confirmButtonColor: '#10b981',
+            timer: 2500,
+            timerProgressBar: true
+          })
         } catch (error) {
           console.error('Delete user error:', error)
-          alert('Failed to delete user: ' + (error.response?.data?.message || error.message))
+          await Swal.fire({
+            icon: 'error',
+            title: 'Deletion Failed',
+            text: error.response?.data?.message || error.message || 'Failed to delete user',
+            confirmButtonColor: '#ef4444'
+          })
         }
       }
     }
@@ -609,5 +791,48 @@ export default {
   .modal-footer .btn {
     width: 100%;
   }
+}
+
+/* SweetAlert2 Custom Styles */
+:deep(.swal2-popup-custom) {
+  border-radius: 16px;
+  padding: 0;
+}
+
+:deep(.swal2-popup-custom .swal2-title) {
+  font-size: 1.5rem;
+  font-weight: 600;
+  padding: 1.5rem 1.5rem 0.5rem;
+}
+
+:deep(.swal2-popup-custom .swal2-html-container) {
+  margin: 0;
+  padding: 0 1.5rem 1.5rem;
+}
+
+:deep(.swal2-confirm-custom),
+:deep(.swal2-cancel-custom) {
+  padding: 0.625rem 1.5rem !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  font-size: 0.9375rem !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+:deep(.swal2-confirm-custom:hover),
+:deep(.swal2-cancel-custom:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+:deep(.swal2-confirm-custom:active),
+:deep(.swal2-cancel-custom:active) {
+  transform: translateY(0);
+}
+
+:deep(.swal2-popup-custom .swal2-icon) {
+  margin: 1.5rem auto 1rem;
 }
 </style>

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Modern Vue.js file archiving system frontend",
   "scripts": {
-    "dev": "vite --host --open=false",
+    "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.3.4",
+    "terser": "^5.19.2",
     "vite": "^4.4.9"
   }
 }

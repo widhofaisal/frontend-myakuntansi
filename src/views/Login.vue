@@ -82,45 +82,49 @@
     </div>
   </div>
 </template>
-
 <script>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Swal from 'sweetalert2'
+import validationUtil from '../utils/validation'
 
 export default {
   name: 'Login',
   setup() {
     const router = useRouter()
     const authStore = useAuthStore()
-    
+
     const showPassword = ref(false)
-    
+
     const form = reactive({
       username: '',
       password: '',
       rememberMe: false
     })
-    
+
     const errors = reactive({
       username: '',
       password: '',
       general: ''
     })
-    
+
     const validateForm = () => {
       // Reset errors
       Object.keys(errors).forEach(key => errors[key] = '')
-      
+
       let isValid = true
-      
-      // Username validation
-      if (!form.username) {
-        errors.username = 'Username is required'
+
+      // Username validation with sanitization
+      const usernameValidation = validationUtil.validateUsername(form.username)
+      if (!usernameValidation.valid) {
+        errors.username = usernameValidation.errors[0]
         isValid = false
-      } 
-      
+      } else {
+        // Update form with sanitized username
+        form.username = usernameValidation.sanitized
+      }
+
       // Password validation
       if (!form.password) {
         errors.password = 'Password is required'
@@ -129,50 +133,47 @@ export default {
         errors.password = 'Password must be at least 6 characters'
         isValid = false
       }
-      
+
       return isValid
     }
-    
+
     const handleLogin = async () => {
       if (!validateForm()) return
-      
-      const result = await authStore.login({
-        username: form.username,
-        password: form.password,
+
+      // Additional security: sanitize inputs before sending
+      const sanitizedCredentials = {
+        username: validationUtil.sanitizeString(form.username),
+        password: form.password, // Don't sanitize password as it may break authentication
         rememberMe: form.rememberMe
-      })
-      
+      }
+
+      const result = await authStore.login(sanitizedCredentials)
+
       if (result.success) {
         router.push('/dashboard')
       } else {
+        // Sanitize error message to prevent XSS
+        const sanitizedMessage = validationUtil.sanitizeString(
+          result.message || 'Incorrect username or password. Please try again.'
+        )
+
         Swal.fire({
           icon: 'error',
           title: 'Login Failed',
-          text: result.message || 'Incorrect username or password. Please try again.',
+          text: sanitizedMessage,
           confirmButtonColor: 'var(--primary-color)',
           background: 'var(--surface-color)',
           color: 'var(--text-primary)',
         })
       }
     }
-    
-    const fillCredentials = (type) => {
-      if (type === 'admin') {
-        form.username = 'adamh'
-        form.password = '199304152015071002'
-      } else {
-        form.username = 'widhofh'
-        form.password = '200208142025061001'
-      }
-    }
-    
+
     return {
       authStore,
       form,
       errors,
       showPassword,
-      handleLogin,
-      fillCredentials
+      handleLogin
     }
   }
 }

@@ -47,7 +47,10 @@ class CSPManager {
       // Restrict connection sources (AJAX, WebSockets, etc.)
       'connect-src': [
         "'self'",
-        import.meta.env.VITE_API_BASE_URL || "https://api.example.com"
+        "http:",
+        "https:",
+        "ws:",
+        "wss:"
       ],
 
       // Restrict media sources
@@ -162,15 +165,8 @@ class CSPManager {
 
     // Add development-specific policies
     if (import.meta.env.DEV) {
-      // Allow webpack dev server
-      if (this.policies['connect-src']) {
-        this.policies['connect-src'].push('ws://localhost:*', 'wss://localhost:*')
-      }
-
-      // Allow Vite dev server
-      if (this.policies['script-src']) {
-        this.policies['script-src'].push('http://localhost:5173', 'http://localhost:8080')
-      }
+      // Development mode already covered by http: https: ws: wss: in connect-src
+      // No additional policies needed
     }
 
     return this

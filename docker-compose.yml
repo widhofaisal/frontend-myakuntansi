@@ -18,14 +18,6 @@ services:
     stdin_open: true
     tty: true
 
-  # Uncomment and configure if you need a backend service
-  # backend:
-  #   image: your-backend-image
-  #   ports:
-  #     - "3000:3000"
-  #   networks:
-  #     - app-network
-
 networks:
   app-network:
     driver: bridge

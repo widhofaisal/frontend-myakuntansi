@@ -78,11 +78,6 @@ class CSPManager {
       // Restrict base URI
       'base-uri': [
         "'self'"
-      ],
-
-      // Control referrer policy
-      'referrer': [
-        'strict-origin-when-cross-origin'
       ]
     }
   }

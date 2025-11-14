@@ -88,13 +88,21 @@ File `nginx.conf` sudah dikonfigurasi dengan:
 
 ## Security Headers
 
-Aplikasi sudah dilengkapi dengan security headers:
-- Content Security Policy (CSP)
-- X-Content-Type-Options
-- X-Frame-Options
-- X-XSS-Protection
-- Referrer-Policy
-- Permissions-Policy
+Aplikasi sudah dilengkapi dengan security headers yang diimplementasikan di 2 tempat:
+
+### Via Meta Tags (index.html):
+- ✅ Content Security Policy (CSP)
+- ✅ X-Content-Type-Options
+- ✅ Referrer-Policy
+
+### Via Nginx HTTP Headers (nginx.conf):
+- ✅ X-Frame-Options
+- ✅ X-Content-Type-Options (redundant untuk double protection)
+- ✅ X-XSS-Protection
+- ✅ Referrer-Policy (redundant untuk double protection)
+- ✅ Permissions-Policy
+
+**Catatan**: Beberapa security headers seperti X-Frame-Options dan X-XSS-Protection hanya bisa diset via HTTP headers (tidak bisa via meta tag), sehingga dikonfigurasi di nginx.
 
 ## Update Aplikasi
 
